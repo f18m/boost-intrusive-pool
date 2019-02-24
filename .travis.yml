@@ -6,3 +6,5 @@ addons:
   apt:
     packages:
     - libboost-dev
+
+script: make test

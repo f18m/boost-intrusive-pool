@@ -144,21 +144,21 @@ BOOST_AUTO_TEST_CASE(infinite_memory_pool)
             max_active = std::max(max_active, helper_container.size());
         }
 
-        assert(num_freed > 0);
+        BOOST_TEST(num_freed > 0);
 
         // This should hold always:
         //         m_free_count+m_inuse_count == m_total_count
-        assert(f.unused_count() + f.inuse_count() == f.capacity());
+        BOOST_REQUIRE_EQUAL(f.unused_count() + f.inuse_count(), f.capacity());
 
-        assert(f.inuse_count() == num_elements - num_freed);
-        assert(f.capacity() >= max_active);
-        assert(!f.empty());
+        BOOST_REQUIRE_EQUAL(f.inuse_count(), num_elements - num_freed);
+        BOOST_TEST(f.capacity() >= max_active);
+        BOOST_TEST(!f.empty());
 
         if (testArray[i].enlarge_step > 1)
-            assert(f.unused_count() > 0);
+            BOOST_TEST(f.unused_count() > 0);
 
         if (testArray[i].initial_size < num_elements - num_freed)
-            assert(f.enlarge_steps_done() > 0);
+            BOOST_TEST(f.enlarge_steps_done() > 0);
 
         // IMPORTANT: this will crash as all pointers inside the map are INVALIDATED before
         //            the map clear() is called:
@@ -170,10 +170,10 @@ BOOST_AUTO_TEST_CASE(infinite_memory_pool)
         helper_container.clear(); // all pointers it contains will be now released
         f.clear();
 
-        assert(f.inuse_count() == 0);
-        assert(f.capacity() == 0);
-        assert(f.empty());
-        assert(f.unused_count() == 0);
+        BOOST_REQUIRE_EQUAL(f.inuse_count(), 0);
+        BOOST_REQUIRE_EQUAL(f.capacity(), 0);
+        BOOST_TEST(f.empty());
+        BOOST_REQUIRE_EQUAL(f.unused_count(), 0);
     }
 }
 
@@ -199,26 +199,26 @@ BOOST_AUTO_TEST_CASE(bounded_memory_pool)
             assert(myInt);
         }
 
-        assert(f.unused_count() == 0);
+        BOOST_REQUIRE_EQUAL(f.unused_count(), 0);
 
         // now if we allocate more we should fail gracefully:
         HDummyInt myInt = f.allocate_through_ctor(4);
-        assert(!myInt);
+        BOOST_TEST(!myInt);
 
         // This should hold always:
         //         m_free_count+m_inuse_count == m_total_count
-        assert(f.unused_count() + f.inuse_count() == f.capacity());
-        assert(f.inuse_count() == testArray[i].initial_size);
-        assert(f.capacity() == testArray[i].initial_size);
-        assert(!f.empty());
-        assert(f.enlarge_steps_done() == 1); // just the initial one
+        BOOST_REQUIRE_EQUAL(f.unused_count() + f.inuse_count(), f.capacity());
+        BOOST_REQUIRE_EQUAL(f.inuse_count(), testArray[i].initial_size);
+        BOOST_REQUIRE_EQUAL(f.capacity(), testArray[i].initial_size);
+        BOOST_TEST(!f.empty());
+        BOOST_REQUIRE_EQUAL(f.enlarge_steps_done(), 1); // just the initial one
 
         helper_container.clear();
         f.clear();
 
-        assert(f.inuse_count() == 0);
-        assert(f.capacity() == 0);
-        assert(f.empty());
+        BOOST_REQUIRE_EQUAL(f.inuse_count(), 0);
+        BOOST_REQUIRE_EQUAL(f.capacity(), 0);
+        BOOST_TEST(f.empty());
     }
 }
 
@@ -228,30 +228,34 @@ BOOST_AUTO_TEST_CASE(test_api)
     {
         boost_intrusive_pool<dummy_one> pool;
 
-        BOOST_TEST(pool.unused_count(), 0U);
+        BOOST_REQUIRE_EQUAL(pool.unused_count(), BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE);
 
         {
             auto d1 = pool.allocate();
-            BOOST_TEST(pool.unused_count(), 0U);
+            BOOST_REQUIRE_EQUAL(pool.unused_count(), BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE - 1);
         }
 
-        BOOST_TEST(pool.unused_count(), 1U);
+        BOOST_REQUIRE_EQUAL(pool.unused_count(), BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE);
 
         auto d2 = pool.allocate();
 
-        BOOST_TEST(pool.unused_count(), 0U);
+        BOOST_REQUIRE_EQUAL(pool.unused_count(), BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE - 1);
 
         auto d3 = pool.allocate();
 
-        BOOST_TEST(pool.unused_count(), 0U);
-        BOOST_TEST(dummy_one::m_count, 2);
+        BOOST_REQUIRE_EQUAL(pool.unused_count(), BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE - 2);
+
+        // the dummy_one::m_count counter is off by 1 because above we called an allocate() and
+        // then destroyed the "d1" pointer: that resulted in the item being recycled and dummy_one::~dummy_one
+        // being called
+        BOOST_REQUIRE_EQUAL(dummy_one::m_count, BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE - 1);
 
         {
             auto d4 = pool.allocate();
-            BOOST_TEST(pool.unused_count(), 0U);
+            BOOST_REQUIRE_EQUAL(pool.unused_count(), BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE - 3);
         }
 
-        BOOST_TEST(pool.unused_count(), 1U);
+        BOOST_REQUIRE_EQUAL(pool.unused_count(), BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE - 2);
 
         // FIXME FIXME THIS DOES NOT WORK CURRENTLY SINCE ALL SMART POINTER DTORS
         // ARE STILL ALIVE AT THIS POINT
