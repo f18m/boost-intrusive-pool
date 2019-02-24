@@ -3,6 +3,9 @@
  * Some unit tests have been adapted from:
  *    https://github.com/steinwurf/recycle
  *
+ * Note that to be able to take advantage of TravisCI/github integration
+ * we only use features of Boost.test up to version 1.58
+ *
  * Author: fmontorsi
  * Created: Feb 2019
  * License: BSD license
@@ -22,7 +25,7 @@
 #include <thread>
 #include <type_traits>
 
-#define BOOST_TEST_MODULE "main4"
+#define BOOST_REQUIRE_MODULE "main4"
 #include <boost/test/included/unit_test.hpp>
 
 using namespace memorypool;
@@ -103,7 +106,7 @@ int32_t dummy_three::m_count = 0;
 // Actual testcases
 //------------------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE(infinite_memory_pool)
+void infinite_memory_pool()
 {
     BOOST_TEST_MESSAGE("Starting boost_intrusive_pool<> tests when memory pool is unbounded");
 
@@ -144,21 +147,21 @@ BOOST_AUTO_TEST_CASE(infinite_memory_pool)
             max_active = std::max(max_active, helper_container.size());
         }
 
-        BOOST_TEST(num_freed > 0);
+        BOOST_REQUIRE(num_freed > 0);
 
         // This should hold always:
         //         m_free_count+m_inuse_count == m_total_count
         BOOST_REQUIRE_EQUAL(f.unused_count() + f.inuse_count(), f.capacity());
 
         BOOST_REQUIRE_EQUAL(f.inuse_count(), num_elements - num_freed);
-        BOOST_TEST(f.capacity() >= max_active);
-        BOOST_TEST(!f.empty());
+        BOOST_REQUIRE(f.capacity() >= max_active);
+        BOOST_REQUIRE(!f.empty());
 
         if (testArray[i].enlarge_step > 1)
-            BOOST_TEST(f.unused_count() > 0);
+            BOOST_REQUIRE(f.unused_count() > 0);
 
         if (testArray[i].initial_size < num_elements - num_freed)
-            BOOST_TEST(f.enlarge_steps_done() > 0);
+            BOOST_REQUIRE(f.enlarge_steps_done() > 0);
 
         // IMPORTANT: this will crash as all pointers inside the map are INVALIDATED before
         //            the map clear() is called:
@@ -172,12 +175,12 @@ BOOST_AUTO_TEST_CASE(infinite_memory_pool)
 
         BOOST_REQUIRE_EQUAL(f.inuse_count(), 0);
         BOOST_REQUIRE_EQUAL(f.capacity(), 0);
-        BOOST_TEST(f.empty());
+        BOOST_REQUIRE(f.empty());
         BOOST_REQUIRE_EQUAL(f.unused_count(), 0);
     }
 }
 
-BOOST_AUTO_TEST_CASE(bounded_memory_pool)
+void bounded_memory_pool()
 {
     BOOST_TEST_MESSAGE("Starting boost_intrusive_pool<> tests when memory pool is bounded");
 
@@ -203,14 +206,14 @@ BOOST_AUTO_TEST_CASE(bounded_memory_pool)
 
         // now if we allocate more we should fail gracefully:
         HDummyInt myInt = f.allocate_through_ctor(4);
-        BOOST_TEST(!myInt);
+        BOOST_REQUIRE(!myInt);
 
         // This should hold always:
         //         m_free_count+m_inuse_count == m_total_count
         BOOST_REQUIRE_EQUAL(f.unused_count() + f.inuse_count(), f.capacity());
         BOOST_REQUIRE_EQUAL(f.inuse_count(), testArray[i].initial_size);
         BOOST_REQUIRE_EQUAL(f.capacity(), testArray[i].initial_size);
-        BOOST_TEST(!f.empty());
+        BOOST_REQUIRE(!f.empty());
         BOOST_REQUIRE_EQUAL(f.enlarge_steps_done(), 1); // just the initial one
 
         helper_container.clear();
@@ -218,12 +221,12 @@ BOOST_AUTO_TEST_CASE(bounded_memory_pool)
 
         BOOST_REQUIRE_EQUAL(f.inuse_count(), 0);
         BOOST_REQUIRE_EQUAL(f.capacity(), 0);
-        BOOST_TEST(f.empty());
+        BOOST_REQUIRE(f.empty());
     }
 }
 
 /// Test the basic API construct and free some objects
-BOOST_AUTO_TEST_CASE(test_api)
+void test_api()
 {
     {
         boost_intrusive_pool<dummy_one> pool;
@@ -260,15 +263,15 @@ BOOST_AUTO_TEST_CASE(test_api)
         // FIXME FIXME THIS DOES NOT WORK CURRENTLY SINCE ALL SMART POINTER DTORS
         // ARE STILL ALIVE AT THIS POINT
         // pool.clear();
-        // BOOST_TEST(pool.unused_count(), 0U);
+        // BOOST_REQUIRE(pool.unused_count(), 0U);
     }
 
-    // BOOST_TEST(dummy_one::m_count, 0);
+    // BOOST_REQUIRE(dummy_one::m_count, 0);
 }
 
 /// Test that the pool works for non default constructable objects, if
 /// we provide the allocator
-BOOST_AUTO_TEST_CASE(test_non_default_constructable)
+void test_non_default_constructable()
 {
     {
         boost_intrusive_pool<dummy_two> pool;
@@ -300,4 +303,16 @@ BOOST_AUTO_TEST_CASE(test_non_default_constructable)
     // now all BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE items have been destroyed through
     // their dtor so it just remains an offset = 2 in the static instance count:
     BOOST_REQUIRE_EQUAL(dummy_two::m_count, 2);
+}
+
+boost::unit_test::test_suite* init_unit_test_suite(int argc, char* argv[])
+{
+    boost::unit_test::test_suite* test = BOOST_TEST_SUITE("Master test suite");
+
+    test->add(BOOST_TEST_CASE(&infinite_memory_pool));
+    test->add(BOOST_TEST_CASE(&bounded_memory_pool));
+    test->add(BOOST_TEST_CASE(&test_api));
+    test->add(BOOST_TEST_CASE(&test_non_default_constructable));
+
+    return test;
 }
