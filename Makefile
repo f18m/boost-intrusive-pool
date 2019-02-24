@@ -2,14 +2,15 @@
 # Assumes Boost and GCC are available in standard paths.
 
 CC=g++
-CXXFLAGS= -std=c++17 -Iinclude -g -O0
+CXXFLAGS= -fPIC -std=c++17 -Iinclude -g -O0
 
 DEPS = \
 	include/boost_intrusive_pool.hpp \
 	tests/tracing_malloc.h
 BINS = \
 	tests/tutorial \
-	tests/unit_tests
+	tests/unit_tests \
+	tests/performance_tests
 
 # Targets
 
@@ -34,3 +35,6 @@ clean:
 
 tests/%: tests/%.o
 	$(CC) -o $@ $^ $(CXXFLAGS)
+
+tests/performance_tests: tests/performance_tests.o tests/json-lib.o
+	$(CC) -o $@ tests/performance_tests.o tests/json-lib.o $(CXXFLAGS)
