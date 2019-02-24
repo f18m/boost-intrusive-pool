@@ -117,8 +117,10 @@ void showcase_boost_intrusive_pointers()
 
     {
         std::cout << "  Now allocating dummy class of size: " << sizeof(DummyClass) << std::endl;
-        boost::intrusive_ptr<DummyClass> hdummy(
-            new DummyClass(3)); // you will see a memory malloc traced when running this line
+
+        boost::intrusive_ptr<DummyClass> hdummy(new DummyClass(3));
+        // you will see a memory malloc traced when running this line
+
         std::cout << "  Size of a simple boost::intrusive_ptr<>: " << sizeof(hdummy) << std::endl;
 
         {
@@ -145,8 +147,10 @@ void showcase_boost_intrusive_pool()
     {
         std::cout << "  Now allocating a new memorypool::boost_intrusive_pool<>. A large malloc will happen."
                   << std::endl;
-        memorypool::boost_intrusive_pool<DummyClass> pool(
-            4, 1); // you will see a memory malloc traced when running this line
+
+        memorypool::boost_intrusive_pool<DummyClass> pool(4, 1);
+        // you will see a memory malloc traced when running this line
+
         std::cout << "  Boost Intrusive Pool for DummyClass has size: " << sizeof(pool) << std::endl;
 
         {

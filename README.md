@@ -51,18 +51,53 @@ Since this project is header-only you don't need any specific installation, just
 In this example we show how to use memory-pooled objects that are initialized through their default constructor:
 
 ```
+#include "boost_intrusive_pool.hpp"
+
+void main()
+{
+	memorypool::boost_intrusive_pool<DummyClass> pool(4); // allocate pool of size 4
+	   // this results in a big memory allocation; from now on instead it's a zero-malloc world:
+	
+	{
+	    // allocate without ANY call at all (max performances):
+	    boost::intrusive_ptr<DummyClass> hdummy = pool.allocate();
+	
+	    // of course copying pointers around does not trigger any memory allocation:
+	    boost::intrusive_ptr<DummyClass> hdummy2 = hdummy;
+	
+	    // if we observed the pool now it would report: capacity=4, unused_count=3, inuse_count=1
+	    
+	    
+	    // now instead allocate using the DummyClass default ctor:
+	    boost::intrusive_ptr<DummyClass> hdummy3 = pool.allocate_through_ctor();
+	    
+	} // this time no memory free() will happen!
+
+	// if we observed the pool now it would report: capacity=4, unused_count=4, inuse_count=0
+}
 
 ```
 
 
 # Example: Using a non-Default Constructor
 
-In this example we show how to use memory-pooled objects that are initialized through their default constructor:
+In this example we show how to use memory-pooled objects that are initialized through their NON default constructor:
 
 ```
+#include "boost_intrusive_pool.hpp"
 
+void main()
+{
+	memorypool::boost_intrusive_pool<DummyClass> pool(4); // allocate pool of size 4
+	   // this results in a big memory allocation; from now on instead it's a zero-malloc world:
+	
+	{
+	    // now instead allocate using the DummyClass NON default ctor:
+	    boost::intrusive_ptr<DummyClass> hdummy3 = pool.allocate_through_ctor(arg1, arg2, arg3);
+	    
+	} // this time no memory free() will happen!
+}
 ```
-
 
 
 # About Thread Safety
