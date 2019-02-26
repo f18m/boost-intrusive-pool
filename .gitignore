@@ -1,0 +1,9 @@
+.cproject
+.project
+.pydevproject
+.settings/
+tests/*.o
+tests/performance_tests
+tests/tutorial
+tests/unit_tests
+

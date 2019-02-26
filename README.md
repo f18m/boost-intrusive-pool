@@ -99,6 +99,102 @@ void main()
 }
 ```
 
+# Performance Results
+
+The following tables show results of some very simple benchmarking obtained on a desktop machine:
+
+```
+Intel(R) Core(TM) i5-4570 CPU @ 3.20GHz, 4 cores
+16GB DDR3
+libc-2.27 (Ubuntu 18.04)
+```
+
+The memory pool implementation is compared against a "no pool" solution, which justs uses directly the heap.
+The benchmarks are then repeated considering 3 different memory allocators:
+ - [GNU libc](https://www.gnu.org/software/libc/) default malloc/free
+ - [Google perftools](https://github.com/gperftools/gperftools) also known as tcmalloc
+ - [Jemalloc](http://jemalloc.net/)
+
+You can find the source code under [tests/performance_tests.cpp](tests/performance_tests.cpp).
+
+<table cellpadding="5" width="100%">
+<tbody>
+<tr>
+<td>
+
+![](tests/results/pattern_1_noallocators.png)
+
+</td>
+<td>
+
+![](tests/results/pattern_1_tcmalloc.png)
+
+</td>
+</tr>
+<tr>
+<td>
+
+![](tests/results/pattern_1_jemalloc.png)
+
+
+</td>
+<td>
+
+Results show that with glibc allocator (regular malloc/free implementation), the use of a memory
+pool results in up to 44% improvement (from an average of 134ns to about 76ns).
+When Google's tcmalloc or jemalloc allocators are in use the improvement grows to 67% and 76% respectively.
+
+This is important to show that even if your software is using an optimized allocator the memory pool
+pattern will improve performances considerably.
+
+</td>
+</tr>
+
+</tbody>
+</table>
+
+Another pattern, perhaps somewhat more realistic, has been benchmarked as well:
+
+<table cellpadding="5" width="100%">
+<tbody>
+<tr>
+<td>
+
+![](tests/results/pattern_2_noallocators.png)
+
+</td>
+<td>
+
+![](tests/results/pattern_2_tcmalloc.png)
+
+</td>
+</tr>
+<tr>
+<td>
+
+![](tests/results/pattern_2_jemalloc.png)
+
+
+</td>
+<td>
+
+These results show that with a pattern where malloc and free operations are scattered and "randomized" 
+a little bit, regular allocators cannot avoid memory fragmentation and less spatial locality compared
+to a memory pool implementation.
+ 
+In particular improvements go from 40% (glibc) to 53% (jemalloc) and up to 73% (tcmalloc).
+
+</td>
+</tr>
+
+</tbody>
+</table>
+
+Of course take all these performance results with care.
+Actual performance gain may vary a lot depending on your rate of malloc/free operations, the pattern in which they happen,
+the size of the pooled items, etc etc.
+
+
 
 # About Thread Safety
 

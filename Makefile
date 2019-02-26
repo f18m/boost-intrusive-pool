@@ -34,10 +34,16 @@ test: $(BINS)
 tests: test
 
 benchmarks: 
-	tests/performance_tests >tests/bench_results_regular.json
+	@echo "Running the performance benchmarking tool without any optimized allocator:"
+	tests/performance_tests     >tests/results/bench_results_noallocators.json
 	@echo "Now running the performance benchmarking tool using some optimized allocator (must be installed systemwide!):"
-	LD_PRELOAD="$(LIBTCMALLOC_LOCATION)" tests/performance_tests >tests/bench_results_tcmalloc.json
-	LD_PRELOAD="$(LIBJEMALLOC_LOCATION)" tests/performance_tests >tests/bench_results_jemalloc.json
+	LD_PRELOAD="$(LIBTCMALLOC_LOCATION)" tests/performance_tests    >tests/results/bench_results_tcmalloc.json
+	LD_PRELOAD="$(LIBJEMALLOC_LOCATION)" tests/performance_tests    >tests/results/bench_results_jemalloc.json
+	
+plots:
+	tests/bench_plot_results.py noallocators tests/results/bench_results_noallocators.json
+	tests/bench_plot_results.py tcmalloc tests/results/bench_results_tcmalloc.json
+	tests/bench_plot_results.py jemalloc tests/results/bench_results_jemalloc.json
 
 clean:
 	rm -f $(BINS) tests/*.o

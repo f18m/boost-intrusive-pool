@@ -1,0 +1,176 @@
+{
+ "pattern_1": {
+  "desc": "Continuous allocations, bulk free at end",
+  "run_1": {
+   "initial_size": 1,
+   "enlarge_step": 1,
+   "num_items": 100000,
+   "boost_intrusive_pool": {
+    "duration_nsec": 9.61496e+06,
+    "duration_nsec_per_item": 96.1496,
+    "num_items_freed": 0,
+    "max_active_items": 100000,
+    "max_rss": 845644,
+    "ctor_count": 1.1e+06,
+    "dtor_count": 1e+06,
+    "num_resizings": 100000
+   },
+   "plain_malloc": {
+    "duration_nsec": 1.3756e+07,
+    "duration_nsec_per_item": 137.56,
+    "num_items_freed": 0,
+    "max_active_items": 100000,
+    "max_rss": 845644,
+    "ctor_count": 1e+06,
+    "dtor_count": 1e+06
+   }
+  },
+  "run_2": {
+   "initial_size": 128,
+   "enlarge_step": 64,
+   "num_items": 100000,
+   "boost_intrusive_pool": {
+    "duration_nsec": 8.00506e+06,
+    "duration_nsec_per_item": 80.0506,
+    "num_items_freed": 0,
+    "max_active_items": 100000,
+    "max_rss": 845644,
+    "ctor_count": 1.10003e+06,
+    "dtor_count": 1e+06,
+    "num_resizings": 1562
+   },
+   "plain_malloc": {
+    "duration_nsec": 1.34337e+07,
+    "duration_nsec_per_item": 134.337,
+    "num_items_freed": 0,
+    "max_active_items": 100000,
+    "max_rss": 845644,
+    "ctor_count": 1e+06,
+    "dtor_count": 1e+06
+   }
+  },
+  "run_3": {
+   "initial_size": 1024,
+   "enlarge_step": 1024,
+   "num_items": 100000,
+   "boost_intrusive_pool": {
+    "duration_nsec": 7.66838e+06,
+    "duration_nsec_per_item": 76.6838,
+    "num_items_freed": 0,
+    "max_active_items": 100000,
+    "max_rss": 845644,
+    "ctor_count": 1.10035e+06,
+    "dtor_count": 1e+06,
+    "num_resizings": 98
+   },
+   "plain_malloc": {
+    "duration_nsec": 1.34586e+07,
+    "duration_nsec_per_item": 134.586,
+    "num_items_freed": 0,
+    "max_active_items": 100000,
+    "max_rss": 845644,
+    "ctor_count": 1e+06,
+    "dtor_count": 1e+06
+   }
+  },
+  "run_4": {
+   "initial_size": 16384,
+   "enlarge_step": 16384,
+   "num_items": 100000,
+   "boost_intrusive_pool": {
+    "duration_nsec": 8.19089e+06,
+    "duration_nsec_per_item": 81.9089,
+    "num_items_freed": 0,
+    "max_active_items": 100000,
+    "max_rss": 845644,
+    "ctor_count": 1.11469e+06,
+    "dtor_count": 1e+06,
+    "num_resizings": 7
+   },
+   "plain_malloc": {
+    "duration_nsec": 1.3801e+07,
+    "duration_nsec_per_item": 138.01,
+    "num_items_freed": 0,
+    "max_active_items": 100000,
+    "max_rss": 845644,
+    "ctor_count": 1e+06,
+    "dtor_count": 1e+06
+   }
+  }
+ },
+ "pattern_2": {
+  "desc": "Mixed alloc/free pattern",
+  "run_1": {
+   "initial_size": 1024,
+   "enlarge_step": 64,
+   "num_items": 100000,
+   "boost_intrusive_pool": {
+    "duration_nsec": 1.94264e+07,
+    "duration_nsec_per_item": 194.264,
+    "num_items_freed": 19393,
+    "max_active_items": 77576,
+    "max_rss": 845644,
+    "ctor_count": 1.07763e+06,
+    "dtor_count": 1e+06,
+    "num_resizings": 1198
+   },
+   "plain_malloc": {
+    "duration_nsec": 2.75851e+07,
+    "duration_nsec_per_item": 275.851,
+    "num_items_freed": 19393,
+    "max_active_items": 77576,
+    "max_rss": 845644,
+    "ctor_count": 1e+06,
+    "dtor_count": 1e+06
+   }
+  },
+  "run_2": {
+   "initial_size": 1024,
+   "enlarge_step": 128,
+   "num_items": 100000,
+   "boost_intrusive_pool": {
+    "duration_nsec": 1.771e+07,
+    "duration_nsec_per_item": 177.1,
+    "num_items_freed": 19393,
+    "max_active_items": 77576,
+    "max_rss": 845644,
+    "ctor_count": 1.0777e+06,
+    "dtor_count": 1e+06,
+    "num_resizings": 600
+   },
+   "plain_malloc": {
+    "duration_nsec": 2.84461e+07,
+    "duration_nsec_per_item": 284.461,
+    "num_items_freed": 19393,
+    "max_active_items": 77576,
+    "max_rss": 845644,
+    "ctor_count": 1e+06,
+    "dtor_count": 1e+06
+   }
+  },
+  "run_3": {
+   "initial_size": 524288,
+   "enlarge_step": 1024,
+   "num_items": 1e+06,
+   "boost_intrusive_pool": {
+    "duration_nsec": 2.01614e+08,
+    "duration_nsec_per_item": 201.614,
+    "num_items_freed": 193987,
+    "max_active_items": 775709,
+    "max_rss": 845644,
+    "ctor_count": 1.07762e+07,
+    "dtor_count": 1e+07,
+    "num_resizings": 247
+   },
+   "plain_malloc": {
+    "duration_nsec": 3.4074e+08,
+    "duration_nsec_per_item": 340.74,
+    "num_items_freed": 193987,
+    "max_active_items": 775709,
+    "max_rss": 845644,
+    "ctor_count": 1e+07,
+    "dtor_count": 1e+07
+   }
+  }
+ }
+}

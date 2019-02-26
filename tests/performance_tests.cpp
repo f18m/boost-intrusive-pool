@@ -22,6 +22,7 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <vector>
 
 #include "boost_intrusive_pool.hpp"
 #include "json-lib.h"
@@ -33,14 +34,24 @@ using namespace memorypool;
 // Constants
 //------------------------------------------------------------------------------
 
-/* Benchmark duration in seconds.  */
-#define BENCHMARK_DURATION 60
-#define RAND_SEED 88
+#define NUM_AVERAGING_RUNS (10)
 
 typedef enum {
     BENCH_PATTERN_CONTINUOUS_ALLOCATION,
     BENCH_PATTERN_MIXED_ALLOC_FREE,
 } BenchPattern_t;
+
+std::string BenchPattern2String(BenchPattern_t t)
+{
+    switch (t) {
+    case BENCH_PATTERN_CONTINUOUS_ALLOCATION:
+        return "Continuous allocations, bulk free at end";
+    case BENCH_PATTERN_MIXED_ALLOC_FREE:
+        return "Mixed alloc/free pattern";
+    default:
+        return "";
+    }
+}
 
 //------------------------------------------------------------------------------
 // MemoryPooled items for benchmark testing:
@@ -144,10 +155,8 @@ static void main_benchmark_loop(
     }
 }
 
-static void do_benchmark(json_ctx_t& json_ctx)
+static void do_benchmark(json_ctx_t* json_ctx)
 {
-    timing_t start, stop, elapsed[2] = { 0 };
-
     typedef struct {
         unsigned int initial_size;
         unsigned int enlarge_step;
@@ -161,7 +170,8 @@ static void do_benchmark(json_ctx_t& json_ctx)
     } pattern_test_t;
 
     pattern_test_t testPatterns[] = {
-        { BENCH_PATTERN_CONTINUOUS_ALLOCATION, // force newline
+        {
+            BENCH_PATTERN_CONTINUOUS_ALLOCATION, // force newline
             4, // force newline
 
             {
@@ -177,36 +187,41 @@ static void do_benchmark(json_ctx_t& json_ctx)
 
                 // run #4 optimal example: the memory pool starts bigger and does just 7 resizing steps
                 { 16384, 16384, (int)1e5 }, // force newline
-            } },
+            } // force newline
+        },
 
         // another more realistic (???) malloc pattern
 
-        { BENCH_PATTERN_MIXED_ALLOC_FREE, // force newline
+        {
+            BENCH_PATTERN_MIXED_ALLOC_FREE, // force newline
             3, // force newline
 
             {
                 // run #5 in this test the memory pool begins small and does several resizings
-                { 1024, 1024, (int)1e5 }, // force newline
+                { 1024, 64, (int)1e5 }, // force newline
 
-                // run #6 in this test the memory pool begins with already a lot of items, so it does close-to-zero
-                // resizings:
-                { 1024 * 1024, 128, (int)1e5 }, // force newline
+                // run #6 in this test the memory pool begins small but does less resizings
+                { 1024, 128, (int)1e5 }, // force newline
 
                 // run #7 in this test the memory pool begins with already a lot of items, so it does close-to-zero
-                // resizings:
-                { 1024 * 1024, 128, (int)1e6 }, // force newline
-            } }
+                //        resizings:
+                { 512 * 1024, 1024, (int)1e6 }, // force newline
+            } // force newline
+        }
     };
 
     for (int j = 0; j < sizeof(testPatterns) / sizeof(testPatterns[0]); j++) {
-        json_attr_object_begin(&json_ctx, (std::string("pattern_") + std::to_string(j + 1)).c_str());
-        json_attr_double(&json_ctx, "type", testPatterns[j].pattern);
+        if (json_ctx) {
+            json_attr_object_begin(json_ctx, (std::string("pattern_") + std::to_string(j + 1)).c_str());
+            json_attr_string(json_ctx, "desc", BenchPattern2String(testPatterns[j].pattern).c_str());
+        }
 
         for (int i = 0; i < testPatterns[j].num_configs; i++) {
             const config_t& runConfig = testPatterns[j].config[i];
 
             size_t num_freed[2], max_active[2], ctor_count[2], dtor_count[2], num_resizings;
             struct rusage usage[2];
+            timing_t avg_time[2];
 
             // run the benchmark with boost_intrusive_pool
             {
@@ -214,12 +229,18 @@ static void do_benchmark(json_ctx_t& json_ctx)
 
                 boost_intrusive_pool<LargeObject> real_pool(
                     runConfig.initial_size /* initial size */, runConfig.enlarge_step /* enlarge step */);
-                TIMING_NOW(start);
-                main_benchmark_loop(
-                    real_pool, testPatterns[j].pattern, runConfig.num_items, num_freed[0], max_active[0]);
-                TIMING_NOW(stop);
-                TIMING_DIFF(elapsed[0], start, stop);
 
+                timing_t start, stop, elapsed, accumulated = 0;
+                for (int k = 0; k < NUM_AVERAGING_RUNS; k++) {
+                    TIMING_NOW(start);
+                    main_benchmark_loop(
+                        real_pool, testPatterns[j].pattern, runConfig.num_items, num_freed[0], max_active[0]);
+                    TIMING_NOW(stop);
+                    TIMING_DIFF(elapsed, start, stop);
+                    TIMING_ACCUM(accumulated, elapsed);
+                }
+
+                avg_time[0] = accumulated / NUM_AVERAGING_RUNS;
                 ctor_count[0] = LargeObject::m_ctor_count;
                 dtor_count[0] = LargeObject::m_dtor_count;
                 num_resizings = real_pool.enlarge_steps_done();
@@ -232,12 +253,18 @@ static void do_benchmark(json_ctx_t& json_ctx)
                 LargeObject::reset_counts();
 
                 NoPool comparison_pool;
-                TIMING_NOW(start);
-                main_benchmark_loop(
-                    comparison_pool, testPatterns[j].pattern, runConfig.num_items, num_freed[1], max_active[1]);
-                TIMING_NOW(stop);
-                TIMING_DIFF(elapsed[1], start, stop);
 
+                timing_t start, stop, elapsed, accumulated = 0;
+                for (int k = 0; k < NUM_AVERAGING_RUNS; k++) {
+                    TIMING_NOW(start);
+                    main_benchmark_loop(
+                        comparison_pool, testPatterns[j].pattern, runConfig.num_items, num_freed[1], max_active[1]);
+                    TIMING_NOW(stop);
+                    TIMING_DIFF(elapsed, start, stop);
+                    TIMING_ACCUM(accumulated, elapsed);
+                }
+
+                avg_time[1] = accumulated / NUM_AVERAGING_RUNS;
                 ctor_count[1] = LargeObject::m_ctor_count;
                 dtor_count[1] = LargeObject::m_dtor_count;
 
@@ -245,57 +272,54 @@ static void do_benchmark(json_ctx_t& json_ctx)
             }
 
             // output results as JSON:
-            json_attr_object_begin(&json_ctx, std::to_string(i + 1).c_str());
+            if (json_ctx) {
+                json_attr_object_begin(json_ctx, ("run_" + std::to_string(i + 1)).c_str());
 
-            // test setup
-            json_attr_double(&json_ctx, "initial_size", runConfig.initial_size);
-            json_attr_double(&json_ctx, "enlarge_step", runConfig.enlarge_step);
-            json_attr_double(&json_ctx, "num_items", runConfig.num_items);
+                // test setup
+                json_attr_double(json_ctx, "initial_size", runConfig.initial_size);
+                json_attr_double(json_ctx, "enlarge_step", runConfig.enlarge_step);
+                json_attr_double(json_ctx, "num_items", runConfig.num_items);
 
-            // test results
-            json_attr_object_begin(&json_ctx, "boost_intrusive_pool_item");
-            json_attr_double(&json_ctx, "duration_nsec", elapsed[0]);
-            json_attr_double(&json_ctx, "duration_nsec_per_item", (double)elapsed[0] / (double)runConfig.num_items);
-            json_attr_double(&json_ctx, "num_items_freed", num_freed[0]);
-            json_attr_double(&json_ctx, "max_active_items", max_active[0]);
-            json_attr_double(&json_ctx, "max_rss", usage[0].ru_maxrss);
-            json_attr_double(&json_ctx, "ctor_count", ctor_count[0]);
-            json_attr_double(&json_ctx, "dtor_count", dtor_count[0]);
-            json_attr_double(&json_ctx, "num_resizings", num_resizings);
-            json_attr_object_end(&json_ctx); // boost_intrusive_pool_item
+                // test results
+                json_attr_object_begin(json_ctx, "boost_intrusive_pool");
+                json_attr_double(json_ctx, "duration_nsec", avg_time[0]);
+                json_attr_double(json_ctx, "duration_nsec_per_item", (double)avg_time[0] / (double)runConfig.num_items);
+                json_attr_double(json_ctx, "num_items_freed", num_freed[0]);
+                json_attr_double(json_ctx, "max_active_items", max_active[0]);
+                json_attr_double(json_ctx, "max_rss", usage[0].ru_maxrss);
+                json_attr_double(json_ctx, "ctor_count", ctor_count[0]);
+                json_attr_double(json_ctx, "dtor_count", dtor_count[0]);
+                json_attr_double(json_ctx, "num_resizings", num_resizings);
+                json_attr_object_end(json_ctx); // boost_intrusive_pool_item
 
-            // test results
-            json_attr_object_begin(&json_ctx, "plain_malloc");
-            json_attr_double(&json_ctx, "duration_nsec", elapsed[1]);
-            json_attr_double(&json_ctx, "duration_nsec_per_item", (double)elapsed[1] / (double)runConfig.num_items);
-            json_attr_double(&json_ctx, "num_items_freed", num_freed[1]);
-            json_attr_double(&json_ctx, "max_active_items", max_active[1]);
-            json_attr_double(&json_ctx, "max_rss", usage[1].ru_maxrss);
-            json_attr_double(&json_ctx, "ctor_count", ctor_count[1]);
-            json_attr_double(&json_ctx, "dtor_count", dtor_count[1]);
-            json_attr_object_end(&json_ctx); // plain_malloc
-            json_attr_object_end(&json_ctx); // run
+                // test results
+                json_attr_object_begin(json_ctx, "plain_malloc");
+                json_attr_double(json_ctx, "duration_nsec", avg_time[1]);
+                json_attr_double(json_ctx, "duration_nsec_per_item", (double)avg_time[1] / (double)runConfig.num_items);
+                json_attr_double(json_ctx, "num_items_freed", num_freed[1]);
+                json_attr_double(json_ctx, "max_active_items", max_active[1]);
+                json_attr_double(json_ctx, "max_rss", usage[1].ru_maxrss);
+                json_attr_double(json_ctx, "ctor_count", ctor_count[1]);
+                json_attr_double(json_ctx, "dtor_count", dtor_count[1]);
+                json_attr_object_end(json_ctx); // plain_malloc
+                json_attr_object_end(json_ctx); // run
+            }
         }
-        json_attr_object_end(&json_ctx); // run
+
+        if (json_ctx)
+            json_attr_object_end(json_ctx); // run
     }
 }
 
 static void do_json_benchmark()
 {
     json_ctx_t json_ctx;
-    // unsigned long res;
 
     json_init(&json_ctx, 0, stdout);
-
     json_document_begin(&json_ctx);
-    // json_attr_string(&json_ctx, "timing_type", TIMING_TYPE); // not really useful
-    // json_attr_object_begin(&json_ctx, "memory_pool");
-    // TIMING_INIT(res);
-
-    do_benchmark(json_ctx);
-
-    // json_attr_object_end(&json_ctx);
+    do_benchmark(&json_ctx);
     json_document_end(&json_ctx);
+
     printf("\n");
 }
 
@@ -310,6 +334,12 @@ int main(int argc, char** argv)
     if (argc > 1)
         usage(argv[0]);
 
+    // to better simulate a realistic workload use our own benchmarking routines to
+    // defrag a little bit the memory of this process (but do not really write any output!)
+    for (unsigned int i = 0; i < 3; i++)
+        do_benchmark(NULL);
+
+    // final run is to write real output JSON
     do_json_benchmark();
 
     return 0;
