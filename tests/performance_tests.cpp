@@ -11,17 +11,11 @@
 // Includes
 //------------------------------------------------------------------------------
 
-#include <errno.h>
 #include <map>
-#include <math.h>
-#include <pthread.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <unordered_map>
 #include <vector>
 
 #include "boost_intrusive_pool.hpp"
