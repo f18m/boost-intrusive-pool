@@ -2,8 +2,8 @@
 # Assumes Boost and GCC are available in standard paths.
 
 CC=g++
-CXXFLAGS= -fPIC -std=c++17 -Iinclude -O3
-#CXXFLAGS= -fPIC -std=c++17 -Iinclude -g -O0     # useful when debugging unit test failures
+#CXXFLAGS= -fPIC -std=c++17 -Iinclude -O3
+CXXFLAGS= -fPIC -std=c++17 -Iinclude -g -O0     # useful when debugging unit test failures
 
 DEPS = \
 	include/boost_intrusive_pool.hpp \
@@ -21,6 +21,11 @@ BINS = \
 LIBTCMALLOC_LOCATION := /usr/lib/x86_64-linux-gnu/libtcmalloc_minimal.so.4
 LIBJEMALLOC_LOCATION := /usr/lib/x86_64-linux-gnu/libjemalloc.so.1
 
+VALGRIND_LOGFILE_POSTFIX:=unit-tests-$(shell date +%F-%H%M%S)
+VALGRIND_SUPP:=valgrind.supp
+VALGRIND_COMMON_OPTS:=--gen-suppressions=all --time-stamp=yes --error-limit=no
+ # --suppressions=$(VALGRIND_SUPP)
+MEMCHECK_COMMON_OPTS:=--tool=memcheck $(VALGRIND_COMMON_OPTS) --track-origins=yes --malloc-fill=AF --free-fill=BF --leak-check=full
 
 # Targets
 
@@ -32,6 +37,10 @@ test: $(BINS)
 
 # just a synonim for "test":
 tests: test
+
+test_valgrind:
+	valgrind $(MEMCHECK_COMMON_OPTS) --log-file=valgrind-$(VALGRIND_LOGFILE_POSTFIX).log tests/unit_tests
+
 
 benchmarks: 
 	@echo "Running the performance benchmarking tool without any optimized allocator:"

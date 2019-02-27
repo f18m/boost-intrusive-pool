@@ -14,17 +14,19 @@ The `boost_intrusive_pool` provides the following features:
  - use of standard, well-defined smart pointers: `boost::intrusive_ptr<>`;
  - polymorphic-friendly pool: if A derives from `boost_intrusive_pool_item`, and B derives from A, the
    memory pool of B just works;
- - **Optional** standard construction: when items are taken out the pool, their ctor is called
-   when the `boost_intrusive_pool::allocate_through_ctor()` is called; C++11 perfect forwarding allows to
-   pass optional parameters to the ctor routine;
- - **Optional** construction via alternative function: when items are taken out the pool, their init() is called
-   when the `boost_intrusive_pool::allocate_through_init()` is called; C++11 perfect forwarding allows to
-   pass optional parameters to the init() routine;
- - **Optional** standard recycling: when items return to the pool, their dtor is called if no other destructor
-   function is provided;
- - **Optional** recycling via custom function: when the pool is constructed, a destructor `std::function` can be
-   specified; when items return to the pool it will be called with the item being recycled as parameter;
  - Header-only.
+ - **Optional** standard construction: when items are allocated out of the pool via the 
+   `boost_intrusive_pool::allocate_through_ctor()` the memory-pooled objects constructor is called; 
+   C++11 perfect forwarding allows to pass optional parameters to the ctor routine;
+ - **Optional** construction via alternative function: when items are allocated out of the pool via the 
+   `boost_intrusive_pool::allocate_through_init()` API, the `init()` member function of the memory-pooled objects 
+   is called; C++11 perfect forwarding allows to pass optional parameters to the `init()` routine;
+ - **Optional** recycling via custom function: when the pool is constructed, a custom function `std::function` can be
+   specified; when items return to the pool it will be called with the item being recycled as parameter; this allows
+   to perform special cleanup like releasing handles, clearing data structures, etc;
+ - **Optional** recycling via alternative function: when items return to the pool, the memory pool can be configured
+   to invoke the `destroy()` member function of the memory-pooled objects; this allows
+   to perform special cleanup like releasing handles, clearing data structures, etc;
 
 Of course there are tradeoffs in the design that bring in some limitations:
  - requires all C++ classes stored inside the memory pool to derive from a base class `boost_intrusive_pool_item`;
@@ -49,7 +51,8 @@ Since this project is header-only it does not need any specific installation, ju
 
 # A Short Tutorial
 
-
+TO BE WRITTEN.
+Check [tests/tutorial.cpp](tests/tutorial.cpp).
 
 
 # Example: Using the Default Constructor

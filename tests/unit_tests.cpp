@@ -16,10 +16,12 @@
 // Includes
 //------------------------------------------------------------------------------
 
+#define BOOST_INTRUSIVE_POOL_DEBUG_CHECKS 1
 #include "boost_intrusive_pool.hpp"
 
 #include <cstdint>
 #include <functional>
+#include <malloc.h>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -69,9 +71,7 @@ struct dummy_one : public boost_intrusive_pool_item {
 
 int32_t dummy_one::m_count = 0;
 
-void recycle_dummy_one(boost::intrusive_ptr<dummy_one> p)
-{ /* nothing to do actually */
-}
+void recycle_dummy_one(boost::intrusive_ptr<dummy_one> p) { /* nothing to do actually */}
 
 // Non Default constructible dummy object
 struct dummy_two : public boost_intrusive_pool_item {
@@ -84,9 +84,7 @@ struct dummy_two : public boost_intrusive_pool_item {
 
 int32_t dummy_two::m_count = 0;
 
-void recycle_dummy_two(boost::intrusive_ptr<dummy_two> p)
-{ /* nothing to do actually */
-}
+void recycle_dummy_two(boost::intrusive_ptr<dummy_two> p) { /* nothing to do actually */}
 
 // enable_shared_from_this dummy object
 struct dummy_three : std::enable_shared_from_this<dummy_three>, public boost_intrusive_pool_item {
@@ -113,32 +111,36 @@ void infinite_memory_pool()
     struct {
         unsigned int initial_size;
         unsigned int enlarge_step;
+        unsigned int num_elements;
     } testArray[] = {
-        { 10, 1 }, // force newline
-        { 1, 100 }, // force newline
-        { 100000, 1 }, // force newline
+        { 10, 1, (int)1e6 }, // force newline
+        { 1, 100, (int)5e4 }, // force newline
+        { 100000, 1, 123456 }, // force newline
     };
 
-    for (int i = 0; i < sizeof(testArray) / sizeof(testArray[0]); i++) {
+    for (int testIdx = 0; testIdx < sizeof(testArray) / sizeof(testArray[0]); testIdx++) {
+        BOOST_TEST_MESSAGE(std::string("Starting test entry #") + std::to_string(testIdx));
+
         boost_intrusive_pool<DummyInt> f(
-            testArray[i].initial_size /* initial size */, testArray[i].enlarge_step /* enlarge step */);
+            testArray[testIdx].initial_size /* initial size */, testArray[testIdx].enlarge_step /* enlarge step */);
 
         BOOST_REQUIRE(!f.is_bounded());
+        f.check();
 
-        size_t num_elements = 10000, num_freed = 0, max_active = 0;
+        size_t num_freed = 0, max_active = 0;
         std::map<int, HDummyInt> helper_container;
-        for (unsigned int i = 0; i < num_elements; i++) {
-            HDummyInt myInt = f.allocate_through_ctor(i);
+        for (unsigned int j = 0; j < testArray[testIdx].num_elements; j++) {
+            HDummyInt myInt = f.allocate_through_ctor(j);
             assert(myInt);
 
             f.check();
 
-            *myInt = i;
-            helper_container[i] = myInt;
+            *myInt = j;
+            helper_container[j] = myInt;
 
             // returns to the factory a few items in pseudo-random order
-            if ((i % 7) == 0 || (i % 53) == 0 || (i % 12345) == 0) {
-                size_t value_to_release = i / 10;
+            if ((j % 7) == 0 || (j % 53) == 0 || (j % 12345) == 0) {
+                size_t value_to_release = j / 10;
 
                 auto it = helper_container.find(value_to_release);
                 if (it != helper_container.end()) {
@@ -151,20 +153,23 @@ void infinite_memory_pool()
             max_active = std::max(max_active, helper_container.size());
         }
 
+        f.check();
+
+        BOOST_REQUIRE(!f.is_memory_exhausted());
         BOOST_REQUIRE(num_freed > 0);
 
         // This should hold always:
         //         m_free_count+m_inuse_count == m_total_count
         BOOST_REQUIRE_EQUAL(f.unused_count() + f.inuse_count(), f.capacity());
 
-        BOOST_REQUIRE_EQUAL(f.inuse_count(), num_elements - num_freed);
+        BOOST_REQUIRE_EQUAL(f.inuse_count(), testArray[testIdx].num_elements - num_freed);
         BOOST_REQUIRE(f.capacity() >= max_active);
         BOOST_REQUIRE(!f.empty());
 
-        if (testArray[i].enlarge_step > 1)
+        if (testArray[testIdx].enlarge_step > 1)
             BOOST_REQUIRE(f.unused_count() > 0);
 
-        if (testArray[i].initial_size < num_elements - num_freed)
+        if (testArray[testIdx].initial_size < testArray[testIdx].num_elements - num_freed)
             BOOST_REQUIRE(f.enlarge_steps_done() > 0);
 
         // IMPORTANT: this will crash as all pointers inside the map are INVALIDATED before
@@ -175,12 +180,17 @@ void infinite_memory_pool()
         */
 
         helper_container.clear(); // all pointers it contains will be now released
+
+        // repeat twice for test:
+        f.clear();
         f.clear();
 
+        f.check();
+
         BOOST_REQUIRE_EQUAL(f.inuse_count(), 0);
-        BOOST_REQUIRE_EQUAL(f.capacity(), testArray[i].initial_size);
+        BOOST_REQUIRE_EQUAL(f.capacity(), 0);
         BOOST_REQUIRE(f.empty());
-        BOOST_REQUIRE_EQUAL(f.unused_count(), testArray[i].initial_size);
+        BOOST_REQUIRE_EQUAL(f.unused_count(), 0);
     }
 }
 
@@ -196,13 +206,15 @@ void bounded_memory_pool()
         { 100000 }, // force newline
     };
 
-    for (int i = 0; i < sizeof(testArray) / sizeof(testArray[0]); i++) {
-        boost_intrusive_pool<DummyInt> f(testArray[i].initial_size /* initial size */, 0 /* enlarge step */);
+    for (int testIdx = 0; testIdx < sizeof(testArray) / sizeof(testArray[0]); testIdx++) {
+        BOOST_TEST_MESSAGE(std::string("Starting test entry #") + std::to_string(testIdx));
+
+        boost_intrusive_pool<DummyInt> f(testArray[testIdx].initial_size /* initial size */, 0 /* enlarge step */);
         std::vector<HDummyInt> helper_container;
 
         BOOST_REQUIRE(f.is_bounded());
 
-        for (unsigned int j = 0; j < testArray[i].initial_size; j++) {
+        for (unsigned int j = 0; j < testArray[testIdx].initial_size; j++) {
             HDummyInt myInt = f.allocate_through_ctor(3);
             assert(myInt);
             helper_container.push_back(myInt);
@@ -219,16 +231,18 @@ void bounded_memory_pool()
         // This should hold always:
         //         m_free_count+m_inuse_count == m_total_count
         BOOST_REQUIRE_EQUAL(f.unused_count() + f.inuse_count(), f.capacity());
-        BOOST_REQUIRE_EQUAL(f.inuse_count(), testArray[i].initial_size);
-        BOOST_REQUIRE_EQUAL(f.capacity(), testArray[i].initial_size);
+        BOOST_REQUIRE_EQUAL(f.inuse_count(), testArray[testIdx].initial_size);
+        BOOST_REQUIRE_EQUAL(f.capacity(), testArray[testIdx].initial_size);
         BOOST_REQUIRE(!f.empty());
         BOOST_REQUIRE_EQUAL(f.enlarge_steps_done(), 1); // just the initial one
 
         helper_container.clear();
         f.clear();
 
+        f.check();
+
         BOOST_REQUIRE_EQUAL(f.inuse_count(), 0);
-        BOOST_REQUIRE_EQUAL(f.capacity(), testArray[i].initial_size);
+        BOOST_REQUIRE_EQUAL(f.capacity(), 0);
         BOOST_REQUIRE(f.empty());
     }
 }
@@ -237,9 +251,16 @@ void bounded_memory_pool()
 void test_api()
 {
     {
+        uint32_t recycled = 0;
         boost_intrusive_pool<dummy_one> pool;
 
-        pool.set_recycle_method(RECYCLE_METHOD_DTOR);
+        auto recycle_fn = [&recycled](dummy_one& object) {
+            BOOST_REQUIRE(object.m_count > 0);
+            object.m_count--;
+            ++recycled;
+        };
+
+        pool.set_recycle_method(RECYCLE_METHOD_CUSTOM_FUNCTION, recycle_fn);
 
         BOOST_REQUIRE_EQUAL(pool.unused_count(), BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE);
 
@@ -317,6 +338,14 @@ void test_non_default_constructable()
 
 boost::unit_test::test_suite* init_unit_test_suite(int argc, char* argv[])
 {
+    // about M_PERTURB:
+    // If this parameter is set to a nonzero value, then bytes of allocated memory
+    // are scrambled; This can be useful for detecting
+    // errors where programs incorrectly rely on allocated memory
+    // being initialized to zero, or reuse values in memory that has
+    // already been freed.
+    mallopt(M_PERTURB, 1);
+
     boost::unit_test::test_suite* test = BOOST_TEST_SUITE("Master test suite");
 
     test->add(BOOST_TEST_CASE(&infinite_memory_pool));

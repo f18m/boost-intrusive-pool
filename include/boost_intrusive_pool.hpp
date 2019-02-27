@@ -7,36 +7,6 @@
  *  - https://github.com/steinwurf/recycle: a C++ memory pool for std::shared_ptr<>, which however
  *    produces 1 malloc operation for each allocation/recycle operation
  *
- * This memory pool implementation provides all following features:
- *  - smart pointer pool: once "allocated" from the pool items whose ref count goes to zero return
- *    automatically to the pool.
- *  - zero-malloc: after a resize of N items, no memory allocations are EVER done until M<=N active
- *    items are in use
- *  - O(1) allocate
- *  - O(1) destroy (pool return)
- *  - use of standard, well-defined smart pointers: boost::intrusive_ptr<>
- *  - polymorphic-friendly pool: if A derives from boost_intrusive_pool_item, and B derives from A, the
- *    memory pool of B just works
- *  - OPTIONAL standard construction: when items are taken out the pool, their ctor is called
- *    when the boost_intrusive_pool::allocate_through_ctor() is called; C++11 perfect forwarding allows to
- *    pass optional parameters to the ctor routine
- *  - OPTIONAL construction via alternative function: when items are taken out the pool, their init() is called
- *    when the boost_intrusive_pool::allocate_through_init() is called; C++11 perfect forwarding allows to
- *    pass optional parameters to the init() routine
- *  - OPTIONAL standard recycling: when items return to the pool, their dtor is called if no other destructor
- *    function is provided
- *  - OPTIONAL recycling via custom function: when the pool is constructed, a destructor std::function can be
- *    specified; when items return to the pool it will be called with the item being recycled as parameter
- *
- * Main limitations:
- *  - provides boost::intrusive_ptr<> instead of the more widely-used std::shared_ptr<>:
- *    reason is that std::shared_ptr<> puts the reference count in a separate block that needs a separate allocation
- *    and thus memory pools based on std::shared_ptr<> (like https://github.com/steinwurf/recycle) cannot be
- *    zero-malloc
- *  - requires "Item" to have a default constructor: reason is that to ensure the spatial locality of allocated
- *    items (for better cache / memory performances) we use the new[] operator which does not allow to provide
- *    any parameter
- *
  * Author: fmontorsi
  * Created: Feb 2019
  * License: BSD license
@@ -72,7 +42,7 @@ typedef enum {
     RECYCLE_METHOD_NONE,
     RECYCLE_METHOD_DESTROY_FUNCTION,
     RECYCLE_METHOD_CUSTOM_FUNCTION,
-    RECYCLE_METHOD_DTOR,
+    // RECYCLE_METHOD_DTOR,
 } recycle_method_e;
 
 //------------------------------------------------------------------------------
@@ -318,7 +288,7 @@ public:
     // The recycle function type
     // If specified the recycle function will be called every time a resource gets recycled into the pool. This allows
     // temporary resources, e.g., file handles to be closed when an object is longer used.
-    using recycle_function = std::function<void(item_ptr)>;
+    using recycle_function = std::function<void(Item&)>;
 
 public:
     // Default constructor
@@ -445,13 +415,17 @@ public:
 
     void clear()
     {
-        assert(m_first_arena);
-        size_t init_size = m_first_arena->get_stored_item_count();
-        boost_intrusive_pool_arena<Item>* pcurr = m_first_arena;
-        while (pcurr) {
-            boost_intrusive_pool_arena<Item>* pnext = pcurr->get_next_arena();
-            delete pcurr;
-            pcurr = pnext;
+        if (m_first_arena) {
+            size_t init_size = m_first_arena->get_stored_item_count();
+            boost_intrusive_pool_arena<Item>* pcurr = m_first_arena;
+            while (pcurr) {
+                boost_intrusive_pool_arena<Item>* pnext = pcurr->get_next_arena();
+                delete pcurr;
+                pcurr = pnext;
+            }
+        } else {
+            // this memory pool has just been clear()ed... the last arena pointer should be null as well:
+            assert(m_last_arena == nullptr);
         }
 
         // status
@@ -464,6 +438,11 @@ public:
         m_free_count = 0;
         m_inuse_count = 0;
         m_total_count = 0;
+    }
+
+    void reset(size_t init_size)
+    {
+        clear();
 
         // repeat initial malloc
         enlarge(init_size);
@@ -471,11 +450,27 @@ public:
 
     void check()
     {
-        assert(m_first_arena);
-        assert(m_last_arena);
-        assert(m_free_count + m_inuse_count == m_total_count);
-        if (!is_bounded()) {
-            assert(m_first_free_item != nullptr || m_memory_exhausted);
+        if (m_first_arena) {
+            // this memory pool has been correctly initialized
+            assert(m_last_arena);
+            assert(m_total_count > 0);
+
+            // this condition should hold at any time:
+            assert(m_free_count + m_inuse_count == m_total_count);
+            if (is_bounded()) {
+                // when the memory pool is bounded it contains only 1 arena of a fixed size:
+                assert(m_first_arena == m_last_arena);
+            } else {
+                // infinite memory pool: either we have a valid free element or the last malloc() must have failed:
+                assert(m_first_free_item != nullptr || m_memory_exhausted);
+            }
+        } else {
+            // this memory pool has just been cleared with clear() apparently:
+            assert(!m_last_arena);
+            assert(!m_first_free_item);
+            assert(m_free_count == 0);
+            assert(m_inuse_count == 0);
+            assert(m_total_count == 0);
         }
     }
 
@@ -592,6 +587,8 @@ private: // implementation functions
         assert(pitem_base->_refcounted_item_get_pool() == this);
 
         Item* pitem = dynamic_cast<Item*>(pitem_base); // downcast (base class -> derived class)
+        assert(pitem != nullptr); // we always allocate all items of the same type,
+                                  // so the dynamic cast cannot fail
         switch (m_recycle_method) {
         case RECYCLE_METHOD_NONE:
             break;
@@ -601,13 +598,16 @@ private: // implementation functions
             break;
 
         case RECYCLE_METHOD_CUSTOM_FUNCTION:
-            m_recycle_fn(pitem);
+            m_recycle_fn(*pitem);
             break;
 
-        case RECYCLE_METHOD_DTOR:
+            // the big problem with using the class destructor is that the virtual table of the item will
+            // be destroyed; attempting to dynamic_cast<> the item later will fail (NULL returned).
+            // so this recycling option is disabled for now
+            // case RECYCLE_METHOD_DTOR:
             // Destroy the object using its dtor:
-            pitem->Item::~Item();
-            break;
+            // pitem->Item::~Item();
+            // break;
         }
 
         // Add the item at the beginning of the free list.
@@ -636,9 +636,11 @@ private:
     size_t m_enlarge_step;
 
     // Pointers to first and last arenas.
-    // First arena is initialized once and never changes.
-    // Last arena is updated on every enlarge step.
-    // NULL values are only valid during construction time.
+    // First arena is changed only at
+    //  - construction time
+    //  - in clear()
+    //  - in reset(size_t)
+    // Pointer to last arena is instead updated on every enlarge step.
     boost_intrusive_pool_arena<Item>* m_first_arena;
     boost_intrusive_pool_arena<Item>* m_last_arena;
 
