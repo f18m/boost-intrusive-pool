@@ -150,10 +150,9 @@ public:
     }
 
     //------------------------------------------------------------------------------
-    // overrideable methods:
+    // default init-after-recycle, destroy-before-recycle methods:
     //------------------------------------------------------------------------------
 
-    virtual void init() {}
     virtual void destroy() {}
 
     //------------------------------------------------------------------------------
@@ -319,7 +318,7 @@ public:
         size_t enlarge_size = BOOST_INTRUSIVE_POOL_INCREASE_STEP, recycle_method_e method = RECYCLE_METHOD_NONE,
         recycle_function recycle = nullptr)
     {
-        m_pool = boost::intrusive_ptr(new impl(enlarge_size, method, recycle));
+        m_pool = boost::intrusive_ptr<impl>(new impl(enlarge_size, method, recycle));
 
         // do initial malloc
         assert(init_size > 0);
@@ -431,7 +430,7 @@ public:
         recycle_function recycle = m_pool->m_recycle_fn;
         m_pool->trigger_self_destruction();
         m_pool = nullptr; // release old pool
-        m_pool = boost::intrusive_ptr(new impl(enlarge_size, method, recycle));
+        m_pool = boost::intrusive_ptr<impl>(new impl(enlarge_size, method, recycle));
     }
 
     void check() { m_pool->check(); }
