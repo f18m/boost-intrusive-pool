@@ -123,11 +123,15 @@ void infinite_memory_pool()
         boost_intrusive_pool<DummyInt> f(
             testArray[i].initial_size /* initial size */, testArray[i].enlarge_step /* enlarge step */);
 
+        BOOST_REQUIRE(!f.is_bounded());
+
         size_t num_elements = 10000, num_freed = 0, max_active = 0;
         std::map<int, HDummyInt> helper_container;
         for (unsigned int i = 0; i < num_elements; i++) {
             HDummyInt myInt = f.allocate_through_ctor(i);
             assert(myInt);
+
+            f.check();
 
             *myInt = i;
             helper_container[i] = myInt;
@@ -174,9 +178,9 @@ void infinite_memory_pool()
         f.clear();
 
         BOOST_REQUIRE_EQUAL(f.inuse_count(), 0);
-        BOOST_REQUIRE_EQUAL(f.capacity(), 0);
+        BOOST_REQUIRE_EQUAL(f.capacity(), testArray[i].initial_size);
         BOOST_REQUIRE(f.empty());
-        BOOST_REQUIRE_EQUAL(f.unused_count(), 0);
+        BOOST_REQUIRE_EQUAL(f.unused_count(), testArray[i].initial_size);
     }
 }
 
@@ -196,10 +200,14 @@ void bounded_memory_pool()
         boost_intrusive_pool<DummyInt> f(testArray[i].initial_size /* initial size */, 0 /* enlarge step */);
         std::vector<HDummyInt> helper_container;
 
+        BOOST_REQUIRE(f.is_bounded());
+
         for (unsigned int j = 0; j < testArray[i].initial_size; j++) {
             HDummyInt myInt = f.allocate_through_ctor(3);
-            helper_container.push_back(myInt);
             assert(myInt);
+            helper_container.push_back(myInt);
+
+            f.check();
         }
 
         BOOST_REQUIRE_EQUAL(f.unused_count(), 0);
@@ -220,7 +228,7 @@ void bounded_memory_pool()
         f.clear();
 
         BOOST_REQUIRE_EQUAL(f.inuse_count(), 0);
-        BOOST_REQUIRE_EQUAL(f.capacity(), 0);
+        BOOST_REQUIRE_EQUAL(f.capacity(), testArray[i].initial_size);
         BOOST_REQUIRE(f.empty());
     }
 }
@@ -230,6 +238,8 @@ void test_api()
 {
     {
         boost_intrusive_pool<dummy_one> pool;
+
+        pool.set_recycle_method(RECYCLE_METHOD_DTOR);
 
         BOOST_REQUIRE_EQUAL(pool.unused_count(), BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE);
 
