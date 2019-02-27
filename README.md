@@ -15,12 +15,12 @@ The `boost_intrusive_pool` provides the following features:
  - polymorphic-friendly pool: if A derives from `boost_intrusive_pool_item`, and B derives from A, the
    memory pool of B just works;
  - Header-only.
- - **Optional** standard construction: when items are allocated out of the pool via the 
-   `boost_intrusive_pool::allocate_through_ctor()` the memory-pooled objects constructor is called; 
-   C++11 perfect forwarding allows to pass optional parameters to the ctor routine;
- - **Optional** construction via alternative function: when items are allocated out of the pool via the 
+ - **Optional** construction via an initialization function: when items are allocated out of the pool via the 
    `boost_intrusive_pool::allocate_through_init()` API, the `init()` member function of the memory-pooled objects 
    is called; C++11 perfect forwarding allows to pass optional parameters to the `init()` routine;
+ - **Optional** construction via custom function: when items are allocated out of the pool via the 
+   `boost_intrusive_pool::allocate_through_function()` the provided custom function is called with the memory-pooled 
+   object as argument;
  - **Optional** recycling via custom function: when the pool is constructed, a custom function `std::function` can be
    specified; when items return to the pool it will be called with the item being recycled as parameter; this allows
    to perform special cleanup like releasing handles, clearing data structures, etc;
@@ -78,7 +78,7 @@ void main()
 	    
 	    
 	    // now instead allocate using the DummyClass default ctor:
-	    boost::intrusive_ptr<DummyClass> hdummy3 = pool.allocate_through_ctor();
+	    boost::intrusive_ptr<DummyClass> hdummy3 = pool.allocate_through_init();
 	    
 	} // this time no memory free() will happen!
 
@@ -102,7 +102,7 @@ void main()
 	
 	{
 	    // now instead allocate using the DummyClass NON default ctor:
-	    boost::intrusive_ptr<DummyClass> hdummy3 = pool.allocate_through_ctor(arg1, arg2, arg3);
+	    boost::intrusive_ptr<DummyClass> hdummy3 = pool.allocate_through_init(arg1, arg2, arg3);
 	    
 	} // this time no memory free() will happen!
 }

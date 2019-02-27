@@ -64,6 +64,7 @@ public:
 
     virtual char dummy() const { return (char)bag[0]; }
     void init(uint32_t n = 0) { bag[0] = 'A' + n; }
+    void yet_another_init_fun(uint32_t n = 0) { bag[0] = 'A' + n; }
 
 private:
     // yet another fat buffer:
@@ -166,7 +167,7 @@ void showcase_boost_intrusive_pool()
             observe_pool(pool);
 
             std::cout << "  Going to release the references to the boost::intrusive_ptr<> created so far. This time no "
-                         "free() will happen, just a dtor call!"
+                         "free() will happen!"
                       << std::endl;
 
         } // this time no memory free() will happen!
@@ -194,8 +195,13 @@ void showcase_boost_intrusive_pool()
                       << " from the memory pool. This time no mallocs will happen but the ctor will get called again!"
                       << std::endl;
 
+            size_t initializer_value = 3;
+
+            auto custom_init_fn
+                = [&initializer_value](DummyDerivedClass& object) { object.yet_another_init_fun(initializer_value); };
+
             // just for fun this time we allocate the object using non-default constructor:
-            boost::intrusive_ptr<DummyDerivedClass> hdummy = pool.allocate_through_ctor(1);
+            boost::intrusive_ptr<DummyDerivedClass> hdummy = pool.allocate_through_function(custom_init_fn);
 
             std::cout << "  Value from allocated dummy class constructed via NON default ctor: " << hdummy->dummy()
                       << std::endl;

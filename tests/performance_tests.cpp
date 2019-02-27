@@ -88,7 +88,7 @@ public:
     NoPool() {}
 
     // just malloc using new() and run the default ctor:
-    HLargeObject allocate_through_ctor() { return HLargeObject(new LargeObject()); }
+    HLargeObject allocate_through_init() { return HLargeObject(new LargeObject()); }
 };
 
 //------------------------------------------------------------------------------
@@ -106,7 +106,7 @@ static void main_benchmark_loop(
         std::vector<HLargeObject> helper_container;
         helper_container.reserve(num_elements);
         for (unsigned int i = 0; i < num_elements; i++) {
-            HLargeObject myInt = pool.allocate_through_ctor();
+            HLargeObject myInt = pool.allocate_through_init();
             assert(myInt);
 
             helper_container.push_back(myInt);
@@ -121,7 +121,7 @@ static void main_benchmark_loop(
         helper_container.reserve(num_elements / 10);
 
         for (unsigned int i = 0; i < num_elements; i++) {
-            HLargeObject myInt = pool.allocate_through_ctor();
+            HLargeObject myInt = pool.allocate_through_init();
             assert(myInt);
 
             if ((i % 33) == 0) {

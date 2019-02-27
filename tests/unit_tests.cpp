@@ -45,7 +45,7 @@ public:
 
     DummyInt(const DummyInt&) = default;
 
-    void init() { m_int = 0; }
+    void init(int j = 0) { m_int = j; }
     void destroy() { m_int = 0; }
 
     bool operator==(const DummyInt& x) const { return x.m_int == m_int; }
@@ -78,6 +78,8 @@ struct dummy_two : public boost_intrusive_pool_item {
     dummy_two(uint32_t useless = 0) { ++m_count; }
 
     ~dummy_two() { --m_count; }
+
+    void init(uint32_t useless = 0) {}
 
     static int32_t m_count;
 };
@@ -130,7 +132,7 @@ void infinite_memory_pool()
         size_t num_freed = 0, max_active = 0;
         std::map<int, HDummyInt> helper_container;
         for (unsigned int j = 0; j < testArray[testIdx].num_elements; j++) {
-            HDummyInt myInt = f.allocate_through_ctor(j);
+            HDummyInt myInt = f.allocate_through_init(j);
             assert(myInt);
 
             f.check();
@@ -215,7 +217,7 @@ void bounded_memory_pool()
         BOOST_REQUIRE(f.is_bounded());
 
         for (unsigned int j = 0; j < testArray[testIdx].initial_size; j++) {
-            HDummyInt myInt = f.allocate_through_ctor(3);
+            HDummyInt myInt = f.allocate_through_init(3);
             assert(myInt);
             helper_container.push_back(myInt);
 
@@ -225,7 +227,7 @@ void bounded_memory_pool()
         BOOST_REQUIRE_EQUAL(f.unused_count(), 0);
 
         // now if we allocate more we should fail gracefully:
-        HDummyInt myInt = f.allocate_through_ctor(4);
+        HDummyInt myInt = f.allocate_through_init(4);
         BOOST_REQUIRE(!myInt);
 
         // This should hold always:
@@ -293,8 +295,8 @@ void test_api()
 
         // FIXME FIXME THIS DOES NOT WORK CURRENTLY SINCE ALL SMART POINTER DTORS
         // ARE STILL ALIVE AT THIS POINT
-        // pool.clear();
-        // BOOST_REQUIRE(pool.unused_count(), 0U);
+        pool.clear();
+        BOOST_REQUIRE_EQUAL(pool.unused_count(), 0U);
     }
 
     // BOOST_REQUIRE(dummy_one::m_count, 0);
@@ -302,7 +304,7 @@ void test_api()
 
 /// Test that the pool works for non default constructable objects, if
 /// we provide the allocator
-void test_non_default_constructable()
+void test_allocate_methods()
 {
     {
         boost_intrusive_pool<dummy_two> pool;
@@ -323,17 +325,43 @@ void test_non_default_constructable()
     {
         boost_intrusive_pool<dummy_two> pool;
 
-        auto o1 = pool.allocate_through_ctor(3U);
-        auto o2 = pool.allocate_through_ctor(3U);
+        auto o1 = pool.allocate_through_init(3U);
+        auto o2 = pool.allocate_through_init(3U);
 
         // the pool constructs BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE items
-        // BUT then we call the default ctor 2 times more:
-        BOOST_REQUIRE_EQUAL(dummy_two::m_count, BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE + 2);
+        BOOST_REQUIRE_EQUAL(dummy_two::m_count, BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE);
     }
 
     // now all BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE items have been destroyed through
     // their dtor so it just remains an offset = 2 in the static instance count:
-    BOOST_REQUIRE_EQUAL(dummy_two::m_count, 2);
+    BOOST_REQUIRE_EQUAL(dummy_two::m_count, 0);
+}
+
+/// Test that everything works even if the pool dies before the
+/// objects allocated
+void pool_die_before_object()
+{
+    {
+        boost::intrusive_ptr<dummy_one> d1;
+        boost::intrusive_ptr<dummy_one> d2;
+        boost::intrusive_ptr<dummy_one> d3;
+
+        dummy_one::m_count = 0;
+
+        {
+            boost_intrusive_pool<dummy_one> pool;
+
+            d1 = pool.allocate();
+            d2 = pool.allocate();
+            d3 = pool.allocate();
+
+            BOOST_REQUIRE_EQUAL(dummy_one::m_count, BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE);
+        }
+
+        BOOST_REQUIRE_EQUAL(dummy_one::m_count, BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE);
+    }
+
+    BOOST_REQUIRE_EQUAL(dummy_one::m_count, 0);
 }
 
 boost::unit_test::test_suite* init_unit_test_suite(int argc, char* argv[])
@@ -351,7 +379,8 @@ boost::unit_test::test_suite* init_unit_test_suite(int argc, char* argv[])
     test->add(BOOST_TEST_CASE(&infinite_memory_pool));
     test->add(BOOST_TEST_CASE(&bounded_memory_pool));
     test->add(BOOST_TEST_CASE(&test_api));
-    test->add(BOOST_TEST_CASE(&test_non_default_constructable));
+    test->add(BOOST_TEST_CASE(&test_allocate_methods));
+    test->add(BOOST_TEST_CASE(&pool_die_before_object));
 
     return test;
 }
