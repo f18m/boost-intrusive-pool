@@ -5,7 +5,7 @@ This project provides a C++ memory pool that is Boost-friendly and performance o
 
 ## Features and Limitations
 The `boost_intrusive_pool` provides the following features:
- - smart pointer pool: once "allocated" from the pool items whose ref count goes to zero return
+ - smart pointer pool: once "allocated" from the pool items whose reference count goes to zero return
    automatically to the pool;
  - zero-malloc: after a resize of N items, no memory allocations are EVER done until M<=N active
    items are in use;
@@ -35,9 +35,9 @@ Of course there are tradeoffs in the design that bring in some limitations:
    and thus memory pools based on `std::shared_ptr<>` (like https://github.com/steinwurf/recycle) cannot be
    zero-malloc due to the heap-allocated control block;
  - requires C++ classes stored inside the memory pool to have a default constructor: reason is that to ensure
-   the spatial locality of allocated items (for better cache / memory performances) we use the new[] operator 
+   the spatial locality of allocated items (for better cache / memory performances) we use the `new[]` operator 
    which does not allow to provide any parameter;
- - adds about 24 bytes of overhead to each C++ class to be stored inside the memory pool.
+ - adds about 32 bytes of overhead to each C++ class to be stored inside the memory pool.
  
 The templated memory pool has been tested with C++14 and C++17 with recent GCC versions (7.x and 8.x).
 

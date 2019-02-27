@@ -219,6 +219,9 @@ void showcase_boost_intrusive_pool()
         std::cout << "  Going to release the whole memory pool. You will see a bunch of dtor and memory free happen!"
                   << std::endl;
     } // you will see a memory free traced when running this line
+
+    std::cout << "Note that the overhead of memory pool support is sizeof(memorypool::boost_intrusive_pool_item)="
+              << sizeof(memorypool::boost_intrusive_pool_item) << "bytes" << std::endl;
 }
 
 //------------------------------------------------------------------------------
