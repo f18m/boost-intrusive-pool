@@ -38,8 +38,6 @@ Of course there are tradeoffs in the design that bring in some limitations:
    the spatial locality of allocated items (for better cache / memory performances) we use the `new[]` operator 
    which does not allow to provide any parameter;
  - adds about 32 bytes of overhead to each C++ class to be stored inside the memory pool.
- 
-The templated memory pool has been tested with C++14 and C++17 with recent GCC versions (7.x and 8.x).
 
 
 # How to Install
@@ -47,6 +45,10 @@ The templated memory pool has been tested with C++14 and C++17 with recent GCC v
 Since this project is header-only it does not need any specific installation, just grab the latest release and put the
 `boost_intrusive_pool.hpp` file in your include path.
 
+# Requirements
+
+This templated memory pool requires a C++14 compliant compiler (it has been tested with GCC 7.x and 8.x).
+It also requires Boost version 1.55 or higher.
 
 
 # A Short Tutorial
