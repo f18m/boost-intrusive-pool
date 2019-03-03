@@ -6,21 +6,21 @@
    "enlarge_step": 1,
    "num_items": 100000,
    "boost_intrusive_pool": {
-    "duration_nsec": 8.64593e+06,
-    "duration_nsec_per_item": 86.4593,
+    "duration_nsec": 1.15112e+07,
+    "duration_nsec_per_item": 115.112,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 1.47459e+06,
-    "ctor_count": 1.1e+06,
-    "dtor_count": 1e+06,
-    "num_resizings": 100000
+    "max_rss": 1.07772e+06,
+    "ctor_count": 100001,
+    "dtor_count": 0,
+    "num_resizings": 100001
    },
    "plain_malloc": {
-    "duration_nsec": 2.38854e+07,
-    "duration_nsec_per_item": 238.854,
+    "duration_nsec": 2.36131e+07,
+    "duration_nsec_per_item": 236.131,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 1.47459e+06,
+    "max_rss": 1.07772e+06,
     "ctor_count": 1e+06,
     "dtor_count": 1e+06
    }
@@ -30,21 +30,21 @@
    "enlarge_step": 64,
    "num_items": 100000,
    "boost_intrusive_pool": {
-    "duration_nsec": 8.848e+06,
-    "duration_nsec_per_item": 88.48,
+    "duration_nsec": 1.12126e+07,
+    "duration_nsec_per_item": 112.126,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 1.47459e+06,
-    "ctor_count": 1.10003e+06,
-    "dtor_count": 1e+06,
+    "max_rss": 1.07772e+06,
+    "ctor_count": 100032,
+    "dtor_count": 0,
     "num_resizings": 1562
    },
    "plain_malloc": {
-    "duration_nsec": 2.5126e+07,
-    "duration_nsec_per_item": 251.26,
+    "duration_nsec": 2.68159e+07,
+    "duration_nsec_per_item": 268.159,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 1.47459e+06,
+    "max_rss": 1.07772e+06,
     "ctor_count": 1e+06,
     "dtor_count": 1e+06
    }
@@ -54,21 +54,21 @@
    "enlarge_step": 1024,
    "num_items": 100000,
    "boost_intrusive_pool": {
-    "duration_nsec": 7.66264e+06,
-    "duration_nsec_per_item": 76.6264,
+    "duration_nsec": 1.06608e+07,
+    "duration_nsec_per_item": 106.608,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 1.47459e+06,
-    "ctor_count": 1.10035e+06,
-    "dtor_count": 1e+06,
+    "max_rss": 1.07772e+06,
+    "ctor_count": 100352,
+    "dtor_count": 0,
     "num_resizings": 98
    },
    "plain_malloc": {
-    "duration_nsec": 2.37523e+07,
-    "duration_nsec_per_item": 237.523,
+    "duration_nsec": 2.66265e+07,
+    "duration_nsec_per_item": 266.265,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 1.47459e+06,
+    "max_rss": 1.07772e+06,
     "ctor_count": 1e+06,
     "dtor_count": 1e+06
    }
@@ -78,21 +78,21 @@
    "enlarge_step": 16384,
    "num_items": 100000,
    "boost_intrusive_pool": {
-    "duration_nsec": 7.88705e+06,
-    "duration_nsec_per_item": 78.8705,
+    "duration_nsec": 1.09702e+07,
+    "duration_nsec_per_item": 109.702,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 1.47459e+06,
-    "ctor_count": 1.11469e+06,
-    "dtor_count": 1e+06,
+    "max_rss": 1.07772e+06,
+    "ctor_count": 114688,
+    "dtor_count": 0,
     "num_resizings": 7
    },
    "plain_malloc": {
-    "duration_nsec": 2.43817e+07,
-    "duration_nsec_per_item": 243.817,
+    "duration_nsec": 2.65755e+07,
+    "duration_nsec_per_item": 265.755,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 1.47459e+06,
+    "max_rss": 1.07772e+06,
     "ctor_count": 1e+06,
     "dtor_count": 1e+06
    }
@@ -105,21 +105,21 @@
    "enlarge_step": 64,
    "num_items": 100000,
    "boost_intrusive_pool": {
-    "duration_nsec": 1.80942e+07,
-    "duration_nsec_per_item": 180.942,
+    "duration_nsec": 2.15574e+07,
+    "duration_nsec_per_item": 215.574,
     "num_items_freed": 19393,
     "max_active_items": 77576,
-    "max_rss": 1.47459e+06,
-    "ctor_count": 1.07763e+06,
-    "dtor_count": 1e+06,
+    "max_rss": 1.07772e+06,
+    "ctor_count": 77632,
+    "dtor_count": 0,
     "num_resizings": 1198
    },
    "plain_malloc": {
-    "duration_nsec": 3.22926e+07,
-    "duration_nsec_per_item": 322.926,
+    "duration_nsec": 2.92017e+07,
+    "duration_nsec_per_item": 292.017,
     "num_items_freed": 19393,
     "max_active_items": 77576,
-    "max_rss": 1.47459e+06,
+    "max_rss": 1.07772e+06,
     "ctor_count": 1e+06,
     "dtor_count": 1e+06
    }
@@ -129,21 +129,21 @@
    "enlarge_step": 128,
    "num_items": 100000,
    "boost_intrusive_pool": {
-    "duration_nsec": 1.87318e+07,
-    "duration_nsec_per_item": 187.318,
+    "duration_nsec": 2.15466e+07,
+    "duration_nsec_per_item": 215.466,
     "num_items_freed": 19393,
     "max_active_items": 77576,
-    "max_rss": 1.47459e+06,
-    "ctor_count": 1.0777e+06,
-    "dtor_count": 1e+06,
+    "max_rss": 1.07772e+06,
+    "ctor_count": 77696,
+    "dtor_count": 0,
     "num_resizings": 600
    },
    "plain_malloc": {
-    "duration_nsec": 3.11636e+07,
-    "duration_nsec_per_item": 311.636,
+    "duration_nsec": 3.09748e+07,
+    "duration_nsec_per_item": 309.748,
     "num_items_freed": 19393,
     "max_active_items": 77576,
-    "max_rss": 1.47459e+06,
+    "max_rss": 1.07772e+06,
     "ctor_count": 1e+06,
     "dtor_count": 1e+06
    }
@@ -153,21 +153,21 @@
    "enlarge_step": 1024,
    "num_items": 1e+06,
    "boost_intrusive_pool": {
-    "duration_nsec": 1.94303e+08,
-    "duration_nsec_per_item": 194.303,
+    "duration_nsec": 2.52826e+08,
+    "duration_nsec_per_item": 252.826,
     "num_items_freed": 193987,
     "max_active_items": 775709,
-    "max_rss": 1.47459e+06,
-    "ctor_count": 1.07762e+07,
-    "dtor_count": 1e+07,
+    "max_rss": 1.07772e+06,
+    "ctor_count": 776192,
+    "dtor_count": 0,
     "num_resizings": 247
    },
    "plain_malloc": {
-    "duration_nsec": 7.35775e+08,
-    "duration_nsec_per_item": 735.775,
+    "duration_nsec": 1.01958e+09,
+    "duration_nsec_per_item": 1019.58,
     "num_items_freed": 193987,
     "max_active_items": 775709,
-    "max_rss": 1.47459e+06,
+    "max_rss": 1.07772e+06,
     "ctor_count": 1e+07,
     "dtor_count": 1e+07
    }

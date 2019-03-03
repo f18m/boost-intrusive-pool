@@ -2,8 +2,8 @@
 # Assumes Boost and GCC are available in standard paths.
 
 CC=g++
-CXXFLAGS= -fPIC -std=c++17 -Iinclude -O3
-#CXXFLAGS= -fPIC -std=c++17 -Iinclude -g -O0     # useful when debugging unit test failures
+CXXFLAGS= -fPIC -std=c++14 -Iinclude -O3
+#CXXFLAGS= -fPIC -std=c++14 -Iinclude -g -O0     # useful when debugging unit test failures
 
 DEPS = \
 	include/boost_intrusive_pool.hpp \

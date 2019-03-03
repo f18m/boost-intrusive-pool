@@ -65,6 +65,9 @@ public:
         LargeObject::m_dtor_count = 0;
     }
 
+    char read(int idx) const { return buf[idx]; }
+    void write(int idx, char c) { buf[idx] = c; }
+
 private:
     // just some fat buffer:
     char buf[1024];
@@ -104,12 +107,16 @@ static void main_benchmark_loop(
     switch (pattern) {
     case BENCH_PATTERN_CONTINUOUS_ALLOCATION: {
         std::vector<HLargeObject> helper_container;
-        helper_container.reserve(num_elements);
+        helper_container.reserve(num_elements); // this results in a single malloc that will not alter the benchmark!
         for (unsigned int i = 0; i < num_elements; i++) {
-            HLargeObject myInt = pool.allocate_through_init();
-            assert(myInt);
+            HLargeObject myLargeObject = pool.allocate_through_init();
+            assert(myLargeObject);
 
-            helper_container.push_back(myInt);
+            // simulate a very light processing of the allocated item:
+            myLargeObject->write(10, myLargeObject->read(10) + 2);
+            myLargeObject->write(20, myLargeObject->read(20) + 2);
+            helper_container.push_back(myLargeObject); // hold a reference otherwise the item will get deallocated!
+
             max_active = std::max(max_active, helper_container.size());
         }
 
@@ -121,14 +128,18 @@ static void main_benchmark_loop(
         helper_container.reserve(num_elements / 10);
 
         for (unsigned int i = 0; i < num_elements; i++) {
-            HLargeObject myInt = pool.allocate_through_init();
-            assert(myInt);
+            HLargeObject myLargeObject = pool.allocate_through_init();
+            assert(myLargeObject);
+
+            // simulate a very light processing of the allocated item:
+            myLargeObject->write(10, myLargeObject->read(10) + 2);
+            myLargeObject->write(20, myLargeObject->read(20) + 2);
 
             if ((i % 33) == 0) {
                 // we suddenly realize that we don't really need the just-allocated item... release it immediately
                 // (it's enough to simply _not_ store it)
             } else {
-                helper_container[i] = myInt;
+                helper_container[i] = myLargeObject;
 
                 // returns to the factory a few items in pseudo-random order
                 if ((i % 7) == 0 || (i % 31) == 0 || (i % 40) == 0 || (i % 53) == 0) {

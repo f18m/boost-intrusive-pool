@@ -5,16 +5,18 @@ This project provides a C++ memory pool that is Boost-friendly and performance o
 
 ## Features and Limitations
 The `boost_intrusive_pool` provides the following features:
- - smart pointer pool: once "allocated" from the pool items whose reference count goes to zero return
+ - **smart pointers**: once "allocated" from the pool items whose reference count goes to zero return
    automatically to the pool;
- - zero-malloc: after a resize of N items, no memory allocations are EVER done until M<=N active
+ - **zero-malloc**: after a resize of `N` items, no memory allocations are EVER done until `M<=N` active
    items are in use;
  - O(1) allocate;
  - O(1) destroy (pool return);
- - use of standard, well-defined smart pointers: `boost::intrusive_ptr<>`;
+ - use of standard, well-defined smart pointers: `boost::intrusive_ptr<>`; see [Boost documentation](https://www.boost.org/doc/libs/1_69_0/libs/smart_ptr/doc/html/smart_ptr.html#intrusive_ptr)
  - polymorphic-friendly pool: if A derives from `boost_intrusive_pool_item`, and B derives from A, the
-   memory pool of B just works;
+   memory pool of B works just fine;
  - Header-only.
+ - Provides two variants: the **infinite memory pool**, which automatically enlarges if the number of active items goes over initial memory pool size,
+   and the **bounded memory pool**, which just returns `NULL` if the
  - **Optional** construction via an initialization function: when items are allocated out of the pool via the 
    `boost_intrusive_pool::allocate_through_init()` API, the `init()` member function of the memory-pooled objects 
    is called; C++11 perfect forwarding allows to pass optional parameters to the `init()` routine;
@@ -53,8 +55,19 @@ It also requires Boost version 1.55 or higher.
 
 # A Short Tutorial
 
-TO BE WRITTEN.
-Check [tests/tutorial.cpp](tests/tutorial.cpp).
+The source code in [tests/tutorial.cpp](tests/tutorial.cpp) provides a short tutorial about the following topics:
+ - `std::shared_ptr<>`
+ - `boost::intrusive_ptr<>`
+ - `memorypool::boost_intrusive_pool<>` (this project)
+ 
+and shows that:
+
+ - allocating an item through `std::shared_ptr<T>` results in the malloc of `sizeof(T)` plus about 16bytes
+   (the control block);
+ - allocating an item through `boost::intrusive_ptr<T>` results in the malloc of `sizeof(T)`: the refcount
+   is not stored in any separate control block;
+ - creation of a `memorypool::boost_intrusive_pool<>` results in several malloc operations, but then:
+ - creation of an item `T` from a `memorypool::boost_intrusive_pool<T>` does not result in any malloc
 
 
 # Example: Using the Default Constructor
@@ -131,25 +144,25 @@ You can find the source code under [tests/performance_tests.cpp](tests/performan
 <table cellpadding="5" width="100%">
 <tbody>
 <tr>
-<td>
+<td width="50%">
 
 ![](tests/results/pattern_1_noallocators.png)
 
 </td>
-<td>
+<td width="50%">
 
 ![](tests/results/pattern_1_tcmalloc.png)
 
 </td>
 </tr>
 <tr>
-<td>
+<td width="50%">
 
 ![](tests/results/pattern_1_jemalloc.png)
 
 
 </td>
-<td>
+<td width="50%">
 
 Results show that with glibc allocator (regular malloc/free implementation), the use of a memory
 pool results in up to 44% improvement (from an average of 134ns to about 76ns).
@@ -169,25 +182,25 @@ Another pattern, perhaps somewhat more realistic, has been benchmarked as well:
 <table cellpadding="5" width="100%">
 <tbody>
 <tr>
-<td>
+<td width="50%">
 
 ![](tests/results/pattern_2_noallocators.png)
 
 </td>
-<td>
+<td width="50%">
 
 ![](tests/results/pattern_2_tcmalloc.png)
 
 </td>
 </tr>
 <tr>
-<td>
+<td width="50%">
 
 ![](tests/results/pattern_2_jemalloc.png)
 
 
 </td>
-<td>
+<td width="50%">
 
 These results show that with a pattern where malloc and free operations are scattered and "randomized" 
 a little bit, regular allocators cannot avoid memory fragmentation and less spatial locality compared
