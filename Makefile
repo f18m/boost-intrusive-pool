@@ -44,13 +44,13 @@ test_valgrind:
 
 benchmarks: 
 	@echo "Running the performance benchmarking tool without any optimized allocator:"
-	tests/performance_tests     >tests/results/bench_results_noallocators.json
+	tests/performance_tests     >tests/results/bench_results_gnulibc.json
 	@echo "Now running the performance benchmarking tool using some optimized allocator (must be installed systemwide!):"
 	LD_PRELOAD="$(LIBTCMALLOC_LOCATION)" tests/performance_tests    >tests/results/bench_results_tcmalloc.json
 	LD_PRELOAD="$(LIBJEMALLOC_LOCATION)" tests/performance_tests    >tests/results/bench_results_jemalloc.json
 	
 plots:
-	tests/bench_plot_results.py noallocators tests/results/bench_results_noallocators.json
+	tests/bench_plot_results.py gnulibc tests/results/bench_results_gnulibc.json
 	tests/bench_plot_results.py tcmalloc tests/results/bench_results_tcmalloc.json
 	tests/bench_plot_results.py jemalloc tests/results/bench_results_jemalloc.json
 

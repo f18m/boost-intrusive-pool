@@ -6,21 +6,21 @@
    "enlarge_step": 1,
    "num_items": 100000,
    "boost_intrusive_pool": {
-    "duration_nsec": 1.25135e+07,
-    "duration_nsec_per_item": 125.135,
+    "duration_nsec": 1.24627e+07,
+    "duration_nsec_per_item": 124.627,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 100001,
     "dtor_count": 0,
     "num_resizings": 100001
    },
    "plain_malloc": {
-    "duration_nsec": 1.43531e+07,
-    "duration_nsec_per_item": 143.531,
+    "duration_nsec": 1.36862e+07,
+    "duration_nsec_per_item": 136.862,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 1e+06,
     "dtor_count": 1e+06
    }
@@ -30,21 +30,21 @@
    "enlarge_step": 64,
    "num_items": 100000,
    "boost_intrusive_pool": {
-    "duration_nsec": 1.0939e+07,
-    "duration_nsec_per_item": 109.39,
+    "duration_nsec": 1.10467e+07,
+    "duration_nsec_per_item": 110.467,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 100032,
     "dtor_count": 0,
     "num_resizings": 1562
    },
    "plain_malloc": {
-    "duration_nsec": 1.38396e+07,
-    "duration_nsec_per_item": 138.396,
+    "duration_nsec": 1.40312e+07,
+    "duration_nsec_per_item": 140.312,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 1e+06,
     "dtor_count": 1e+06
    }
@@ -54,21 +54,21 @@
    "enlarge_step": 1024,
    "num_items": 100000,
    "boost_intrusive_pool": {
-    "duration_nsec": 1.09324e+07,
-    "duration_nsec_per_item": 109.324,
+    "duration_nsec": 1.1183e+07,
+    "duration_nsec_per_item": 111.83,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 100352,
     "dtor_count": 0,
     "num_resizings": 98
    },
    "plain_malloc": {
-    "duration_nsec": 1.47045e+07,
-    "duration_nsec_per_item": 147.045,
+    "duration_nsec": 1.46498e+07,
+    "duration_nsec_per_item": 146.498,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 1e+06,
     "dtor_count": 1e+06
    }
@@ -78,21 +78,21 @@
    "enlarge_step": 16384,
    "num_items": 100000,
    "boost_intrusive_pool": {
-    "duration_nsec": 1.15281e+07,
-    "duration_nsec_per_item": 115.281,
+    "duration_nsec": 1.13708e+07,
+    "duration_nsec_per_item": 113.708,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 114688,
     "dtor_count": 0,
     "num_resizings": 7
    },
    "plain_malloc": {
-    "duration_nsec": 1.52662e+07,
-    "duration_nsec_per_item": 152.662,
+    "duration_nsec": 1.36612e+07,
+    "duration_nsec_per_item": 136.612,
     "num_items_freed": 0,
     "max_active_items": 100000,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 1e+06,
     "dtor_count": 1e+06
    }
@@ -105,21 +105,21 @@
    "enlarge_step": 64,
    "num_items": 100000,
    "boost_intrusive_pool": {
-    "duration_nsec": 2.38708e+07,
-    "duration_nsec_per_item": 238.708,
+    "duration_nsec": 2.43862e+07,
+    "duration_nsec_per_item": 243.862,
     "num_items_freed": 19393,
     "max_active_items": 77576,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 77632,
     "dtor_count": 0,
     "num_resizings": 1198
    },
    "plain_malloc": {
-    "duration_nsec": 2.74474e+07,
-    "duration_nsec_per_item": 274.474,
+    "duration_nsec": 2.7661e+07,
+    "duration_nsec_per_item": 276.61,
     "num_items_freed": 19393,
     "max_active_items": 77576,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 1e+06,
     "dtor_count": 1e+06
    }
@@ -129,21 +129,21 @@
    "enlarge_step": 128,
    "num_items": 100000,
    "boost_intrusive_pool": {
-    "duration_nsec": 2.17411e+07,
-    "duration_nsec_per_item": 217.411,
+    "duration_nsec": 2.31621e+07,
+    "duration_nsec_per_item": 231.621,
     "num_items_freed": 19393,
     "max_active_items": 77576,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 77696,
     "dtor_count": 0,
     "num_resizings": 600
    },
    "plain_malloc": {
-    "duration_nsec": 2.63655e+07,
-    "duration_nsec_per_item": 263.655,
+    "duration_nsec": 2.69408e+07,
+    "duration_nsec_per_item": 269.408,
     "num_items_freed": 19393,
     "max_active_items": 77576,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 1e+06,
     "dtor_count": 1e+06
    }
@@ -153,21 +153,21 @@
    "enlarge_step": 1024,
    "num_items": 1e+06,
    "boost_intrusive_pool": {
-    "duration_nsec": 2.42785e+08,
-    "duration_nsec_per_item": 242.785,
+    "duration_nsec": 2.42851e+08,
+    "duration_nsec_per_item": 242.851,
     "num_items_freed": 193987,
     "max_active_items": 775709,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 776192,
     "dtor_count": 0,
     "num_resizings": 247
    },
    "plain_malloc": {
-    "duration_nsec": 3.35952e+08,
-    "duration_nsec_per_item": 335.952,
+    "duration_nsec": 3.28475e+08,
+    "duration_nsec_per_item": 328.475,
     "num_items_freed": 193987,
     "max_active_items": 775709,
-    "max_rss": 845744,
+    "max_rss": 845756,
     "ctor_count": 1e+07,
     "dtor_count": 1e+07
    }

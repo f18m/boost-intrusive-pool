@@ -14,9 +14,10 @@ The `boost_intrusive_pool` provides the following features:
  - use of standard, well-defined smart pointers: `boost::intrusive_ptr<>`; see [Boost documentation](https://www.boost.org/doc/libs/1_69_0/libs/smart_ptr/doc/html/smart_ptr.html#intrusive_ptr)
  - polymorphic-friendly pool: if A derives from `boost_intrusive_pool_item`, and B derives from A, the
    memory pool of B works just fine;
- - Header-only.
- - Provides two variants: the **infinite memory pool**, which automatically enlarges if the number of active items goes over initial memory pool size,
-   and the **bounded memory pool**, which just returns `NULL` if the
+ - Header-only;
+ - Provides two variants: the **infinite memory pool**, which automatically enlarges if the number of active items goes over 
+   initial memory pool size, and the **bounded memory pool**, which just returns `NULL` if trying to allocate more active
+   items than the configured limit;
  - **Optional** construction via an initialization function: when items are allocated out of the pool via the 
    `boost_intrusive_pool::allocate_through_init()` API, the `init()` member function of the memory-pooled objects 
    is called; C++11 perfect forwarding allows to pass optional parameters to the `init()` routine;
@@ -133,20 +134,32 @@ Intel(R) Core(TM) i5-4570 CPU @ 3.20GHz, 4 cores
 libc-2.27 (Ubuntu 18.04)
 ```
 
-The memory pool implementation is compared against a "no pool" solution, which justs uses directly the heap.
-The benchmarks are then repeated considering 3 different memory allocators:
- - [GNU libc](https://www.gnu.org/software/libc/) default malloc/free
- - [Google perftools](https://github.com/gperftools/gperftools) also known as tcmalloc
- - [Jemalloc](http://jemalloc.net/)
+The memory pool implementation is compared against a "no pool" solution (the `plain_malloc` line), which simply allocates
+items directly from the heap through `malloc`.
+For both the `boost_intrusive_pool` and the `plain_malloc` a very lightweight processing is simulated on the allocated
+items so that these performance results show the gian you obtain if:
+ - you intend to create a memory pool of large items, expensive to allocate each time;
+ - the processing for each time is lightweight.
 
-You can find the source code under [tests/performance_tests.cpp](tests/performance_tests.cpp).
+The benchmarks are then repeated considering 3 different memory allocators:
+ 1. [GNU libc](https://www.gnu.org/software/libc/) default malloc/free
+ 2. [Google perftools](https://github.com/gperftools/gperftools) also known as tcmalloc
+ 3. [Jemalloc](http://jemalloc.net/)
+
+Moreover 2 different memory allocation/deallocation patterns are considered:
+ 1. `Continuous allocations, bulk free at end`: all 100 thousands large objects are allocated sequentially, lightweight-processed
+    and then released back to the pool/heap.
+ 2. `Mixed alloc/free pattern`: the items are returned to the pool/heap in a pseudo-random order, potentially generating memory fragmentation
+    in the `plain_malloc` implementation.
+
+Results for the `Continuous allocations, bulk free at end` benchmark follow:
 
 <table cellpadding="5" width="100%">
 <tbody>
 <tr>
 <td width="50%">
 
-![](tests/results/pattern_1_noallocators.png)
+![](tests/results/pattern_1_gnulibc.png)
 
 </td>
 <td width="50%">
@@ -177,14 +190,14 @@ pattern will improve performances considerably.
 </tbody>
 </table>
 
-Another pattern, perhaps somewhat more realistic, has been benchmarked as well:
+Results for the `Mixed alloc/free pattern` benchmark follow:
 
 <table cellpadding="5" width="100%">
 <tbody>
 <tr>
 <td width="50%">
 
-![](tests/results/pattern_2_noallocators.png)
+![](tests/results/pattern_2_gnulibc.png)
 
 </td>
 <td width="50%">
@@ -217,6 +230,7 @@ In particular improvements go from 40% (glibc) to 53% (jemalloc) and up to 73% (
 Of course take all these performance results with care.
 Actual performance gain may vary a lot depending on your rate of malloc/free operations, the pattern in which they happen,
 the size of the pooled items, etc etc.
+You can find the source code used to generate these benchmark results in the file [tests/performance_tests.cpp](tests/performance_tests.cpp).
 
 
 
