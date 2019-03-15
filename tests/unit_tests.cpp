@@ -302,8 +302,6 @@ void test_api()
     // BOOST_REQUIRE(dummy_one::m_count, 0);
 }
 
-/// Test that the pool works for non default constructable objects, if
-/// we provide the allocator
 void test_allocate_methods()
 {
     {
@@ -364,6 +362,64 @@ void pool_die_before_object()
     BOOST_REQUIRE_EQUAL(dummy_one::m_count, 0);
 }
 
+void overwrite_pool_items_with_other_pool_items()
+{
+    boost_intrusive_pool<DummyInt> pool(64, 16, memorypool::RECYCLE_METHOD_DESTROY_FUNCTION);
+
+    pool.check();
+
+    {
+        std::map<int, HDummyInt> helper_container;
+        for (unsigned int j = 0; j < 1000; j++) {
+            HDummyInt myInt = pool.allocate_through_init(j);
+            assert(myInt);
+
+            pool.check();
+
+            // put the item inside a MAP container
+            helper_container[j] = myInt;
+        }
+
+        pool.check();
+
+        BOOST_REQUIRE(!pool.is_memory_exhausted());
+        BOOST_REQUIRE_EQUAL(pool.inuse_count(), 1000);
+
+        // now allocate an other block of items and check refcounting happens correctly so that
+        // if we overwrite a filled map entry, the previous pointer is erased correctly
+        for (unsigned int j = 0; j < 500; j++) {
+            HDummyInt myInt = pool.allocate_through_init(j);
+            assert(myInt);
+
+            pool.check();
+
+            // put the item inside a MAP container
+            helper_container[j] = myInt;
+        }
+
+        pool.check();
+
+        BOOST_REQUIRE(!pool.is_memory_exhausted());
+        BOOST_REQUIRE_EQUAL(
+            pool.inuse_count(), 1000); // should be still 1000: we allocated 500 more but released other 500 entries!
+
+        helper_container.clear(); // all pointers it contains will be now released
+    }
+
+    BOOST_REQUIRE_EQUAL(pool.inuse_count(), 0);
+
+    // repeat twice for test:
+    pool.clear();
+    pool.clear();
+
+    pool.check();
+
+    BOOST_REQUIRE_EQUAL(pool.inuse_count(), 0);
+    BOOST_REQUIRE_EQUAL(pool.capacity(), 0);
+    BOOST_REQUIRE(pool.empty());
+    BOOST_REQUIRE_EQUAL(pool.unused_count(), 0);
+}
+
 boost::unit_test::test_suite* init_unit_test_suite(int argc, char* argv[])
 {
     // about M_PERTURB:
@@ -381,6 +437,7 @@ boost::unit_test::test_suite* init_unit_test_suite(int argc, char* argv[])
     test->add(BOOST_TEST_CASE(&test_api));
     test->add(BOOST_TEST_CASE(&test_allocate_methods));
     test->add(BOOST_TEST_CASE(&pool_die_before_object));
+    test->add(BOOST_TEST_CASE(&overwrite_pool_items_with_other_pool_items));
 
     return test;
 }

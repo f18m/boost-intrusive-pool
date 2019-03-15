@@ -2,8 +2,9 @@
 # Assumes Boost and GCC are available in standard paths.
 
 CC=g++
-CXXFLAGS= -fPIC -std=c++14 -Iinclude -O3
-#CXXFLAGS= -fPIC -std=c++14 -Iinclude -g -O0     # useful when debugging unit test failures
+#CXXFLAGS= -fPIC -std=c++14 -Iinclude -O3
+CXXFLAGS= -fPIC -std=c++14 -Iinclude -g -O0     # useful when debugging unit test failures
+DEBUGFLAGS= -DBOOST_INTRUSIVE_POOL_DEBUG_CHECKS=1 -DBOOST_INTRUSIVE_POOL_DEBUG_THREAD_ACCESS=1
 
 DEPS = \
 	include/boost_intrusive_pool.hpp \
@@ -64,6 +65,10 @@ clean:
 
 %.o: %.cpp $(DEPS)
 	$(CC) $(CXXFLAGS) -c -o $@ $< 
+
+# when compiling unit tests CPP also include DEBUGFLAGS to increase amount of checks we do:
+tests/unit_tests.o: tests/unit_tests.cpp
+	$(CC) $(CXXFLAGS) $(DEBUGFLAGS) -c -o $@ $<
 
 tests/%: tests/%.o
 	$(CC) -o $@ $^ $(CXXFLAGS)

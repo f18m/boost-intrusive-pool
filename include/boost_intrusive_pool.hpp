@@ -32,8 +32,21 @@ namespace memorypool {
 #define BOOST_INTRUSIVE_POOL_INCREASE_STEP (64)
 
 #ifndef BOOST_INTRUSIVE_POOL_DEBUG_CHECKS
+// if you define BOOST_INTRUSIVE_POOL_DEBUG_CHECKS=1 before including this header file,
+// you will activate a lot more debug checks on the memory pool to verify its integrity;
+// this is useful during e.g. debug builds
 #define BOOST_INTRUSIVE_POOL_DEBUG_CHECKS (0)
 #endif
+
+#ifndef BOOST_INTRUSIVE_POOL_DEBUG_THREAD_ACCESS
+// if you define BOOST_INTRUSIVE_POOL_DEBUG_THREAD_ACCESS=1 before including this header file,
+// you will activate a pthread-specific check about correct thread access to the memory pool
+#define BOOST_INTRUSIVE_POOL_DEBUG_THREAD_ACCESS (0)
+#else
+// checks are active: we use pthread_self() API:
+#include <pthread.h>
+#endif
+
 #ifndef BOOST_INTRUSIVE_POOL_DEBUG_MAX_REFCOUNT
 // completely-arbitrary threshold about what range of refcounts can be considered
 // sane and valid and which range cannot be considered valid!
@@ -487,6 +500,10 @@ private:
             m_free_count = 0;
             m_inuse_count = 0;
             m_total_count = 0;
+
+#if BOOST_INTRUSIVE_POOL_DEBUG_THREAD_ACCESS
+            m_allowed_thread = 0;
+#endif
         }
 
         ~impl()
@@ -518,6 +535,13 @@ private:
 
         Item* allocate_safe_get_recycled_item()
         {
+#if BOOST_INTRUSIVE_POOL_DEBUG_THREAD_ACCESS
+            if (m_allowed_thread == 0)
+                m_allowed_thread = pthread_self();
+            else
+                assert(m_allowed_thread == pthread_self());
+#endif
+
             if (m_free_count == 0) {
                 assert(m_first_free_item == nullptr);
                 if (m_enlarge_step == 0 || !enlarge(m_enlarge_step)) {
@@ -563,6 +587,9 @@ private:
 
         bool enlarge(size_t arena_size)
         {
+#if BOOST_INTRUSIVE_POOL_DEBUG_THREAD_ACCESS
+            assert(m_allowed_thread == 0 || m_allowed_thread == pthread_self());
+#endif
             // If the current arena is full, create a new one.
             boost_intrusive_pool_arena<Item>* new_arena = new boost_intrusive_pool_arena<Item>(arena_size, this);
             if (!new_arena)
@@ -589,6 +616,9 @@ private:
 
         virtual void recycle(boost_intrusive_pool_item* pitem_base) override
         {
+#if BOOST_INTRUSIVE_POOL_DEBUG_THREAD_ACCESS
+            assert(m_allowed_thread != 0 && m_allowed_thread == pthread_self());
+#endif
             assert(pitem_base
                 && pitem_base->_refcounted_item_get_next()
                     == nullptr); // Recycling an item that has been already recycled?
@@ -776,6 +806,10 @@ private:
         size_t m_total_count;
 
         bool m_trigger_self_destruction;
+
+#if BOOST_INTRUSIVE_POOL_DEBUG_THREAD_ACCESS
+        pthread_t m_allowed_thread;
+#endif
     };
 
 private:
