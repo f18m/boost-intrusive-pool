@@ -2,8 +2,8 @@
 # Assumes Boost and GCC are available in standard paths.
 
 CC=g++
-CXXFLAGS_OPT= -fPIC -std=c++14 -Iinclude -O3
-CXXFLAGS_DBG= -fPIC -std=c++14 -Iinclude -g -O0
+CXXFLAGS_OPT= -fPIC -std=c++11 -Iinclude -O3 -pthread
+CXXFLAGS_DBG= -fPIC -std=c++11 -Iinclude -g -O0 -pthread
 DEBUGFLAGS= -DBOOST_INTRUSIVE_POOL_DEBUG_CHECKS=1 -DBOOST_INTRUSIVE_POOL_DEBUG_THREAD_ACCESS=1
 
 DEPS = \
@@ -77,7 +77,7 @@ tests/json-lib.o: tests/json-lib.cpp
 	$(CC) $(CXXFLAGS_OPT) -c -o $@ $<
 
 tests/%: tests/%.o
-	$(CC) -o $@ $^
+	$(CC) -o $@ $^ -pthread
 
 tests/performance_tests: tests/performance_tests.o tests/json-lib.o
 	$(CC) -o $@ tests/performance_tests.o tests/json-lib.o $(CXXFLAGS)

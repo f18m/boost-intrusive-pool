@@ -50,7 +50,7 @@ Since this project is header-only it does not need any specific installation, ju
 
 # Requirements
 
-This templated memory pool requires a C++14 compliant compiler (it has been tested with GCC 7.x and 8.x).
+This templated memory pool requires a C++11 compliant compiler (it has been tested with GCC 7.x and 8.x).
 It also requires Boost version 1.55 or higher.
 
 
