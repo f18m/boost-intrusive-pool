@@ -2,8 +2,8 @@
 # Assumes Boost and GCC are available in standard paths.
 
 CC=g++
-#CXXFLAGS= -fPIC -std=c++14 -Iinclude -O3
-CXXFLAGS= -fPIC -std=c++14 -Iinclude -g -O0     # useful when debugging unit test failures
+CXXFLAGS_OPT= -fPIC -std=c++14 -Iinclude -O3
+CXXFLAGS_DBG= -fPIC -std=c++14 -Iinclude -g -O0
 DEBUGFLAGS= -DBOOST_INTRUSIVE_POOL_DEBUG_CHECKS=1 -DBOOST_INTRUSIVE_POOL_DEBUG_THREAD_ACCESS=1
 
 DEPS = \
@@ -64,14 +64,20 @@ clean:
 # Rules
 
 %.o: %.cpp $(DEPS)
-	$(CC) $(CXXFLAGS) -c -o $@ $< 
+	$(CC) $(CXXFLAGS_DBG) $(DEBUGFLAGS) -c -o $@ $< 
 
 # when compiling unit tests CPP also include DEBUGFLAGS to increase amount of checks we do:
 tests/unit_tests.o: tests/unit_tests.cpp
-	$(CC) $(CXXFLAGS) $(DEBUGFLAGS) -c -o $@ $<
+	$(CC) $(CXXFLAGS_DBG) $(DEBUGFLAGS) -c -o $@ $<
+
+# when compiling unit tests CPP also include DEBUGFLAGS to increase amount of checks we do:
+tests/performance_tests.o: tests/performance_tests.cpp
+	$(CC) $(CXXFLAGS_OPT) -c -o $@ $<
+tests/json-lib.o: tests/json-lib.cpp
+	$(CC) $(CXXFLAGS_OPT) -c -o $@ $<
 
 tests/%: tests/%.o
-	$(CC) -o $@ $^ $(CXXFLAGS)
+	$(CC) -o $@ $^
 
 tests/performance_tests: tests/performance_tests.o tests/json-lib.o
 	$(CC) -o $@ tests/performance_tests.o tests/json-lib.o $(CXXFLAGS)

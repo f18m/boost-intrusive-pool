@@ -617,7 +617,8 @@ private:
         virtual void recycle(boost_intrusive_pool_item* pitem_base) override
         {
 #if BOOST_INTRUSIVE_POOL_DEBUG_THREAD_ACCESS
-            assert(m_allowed_thread != 0 && m_allowed_thread == pthread_self());
+            assert(m_allowed_thread != 0);
+            assert(m_allowed_thread == pthread_self());
 #endif
             assert(pitem_base
                 && pitem_base->_refcounted_item_get_next()
