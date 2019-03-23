@@ -137,12 +137,12 @@ libc-2.27 (Ubuntu 18.04)
 The memory pool implementation is compared against a "no pool" solution (the `plain_malloc` line), which simply allocates
 items directly from the heap through `malloc`.
 For both the `boost_intrusive_pool` and the `plain_malloc` a very lightweight processing is simulated on the allocated
-items so that these performance results show the gian you obtain if:
+items so that these performance results show the gain you obtain if:
  - you intend to create a memory pool of large items, expensive to allocate each time;
- - the processing for each time is lightweight.
+ - the processing for each item is lightweight.
 
 The benchmarks are then repeated considering 3 different memory allocators:
- 1. [GNU libc](https://www.gnu.org/software/libc/) default malloc/free
+ 1. [GNU libc](https://www.gnu.org/software/libc/) default malloc/free implementation
  2. [Google perftools](https://github.com/gperftools/gperftools) also known as tcmalloc
  3. [Jemalloc](http://jemalloc.net/)
 
@@ -151,6 +151,12 @@ Moreover 2 different memory allocation/deallocation patterns are considered:
     and then released back to the pool/heap.
  2. `Mixed alloc/free pattern`: the items are returned to the pool/heap in a pseudo-random order, potentially generating memory fragmentation
     in the `plain_malloc` implementation.
+    
+Finally for each combination of memory allocator and allocation pattern we measure the mean time it takes to allocate an item
+(or retrieve it from the memory pool!) against the "memory pool enlarge step" configuration value. Of course the enlarge step
+parameter will affect only the memory pool perfomances so that in theory the "plain malloc" time should remain constant
+(i.e. all green lines should be flat in all graphs below!). In practice small variations are expected also in the measured
+times for the "plain malloc".
 
 Results for the `Continuous allocations, bulk free at end` benchmark follow:
 
