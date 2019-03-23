@@ -20,7 +20,22 @@ BINS = \
 # tested on Ubuntu 18.04
 #    apt install libtcmalloc-minimal4 libjemalloc1
 LIBTCMALLOC_LOCATION := /usr/lib/x86_64-linux-gnu/libtcmalloc_minimal.so.4
+ifeq (,$(wildcard $(LIBTCMALLOC_LOCATION)))
+$(info Could not find libtcmalloc in Ubuntu default location, trying RHEL default location)
+LIBTCMALLOC_LOCATION := /usr/lib64/libtcmalloc_minimal.so.4.4.5
+ifeq (,$(wildcard $(LIBTCMALLOC_LOCATION)))
+$(info Could not find libtcmalloc... benchmarks using that will not run)
+endif
+endif
+
 LIBJEMALLOC_LOCATION := /usr/lib/x86_64-linux-gnu/libjemalloc.so.1
+ifeq (,$(wildcard $(LIBJEMALLOC_LOCATION)))
+$(info Could not find libjemalloc in Ubuntu default location, trying RHEL default location)
+LIBJEMALLOC_LOCATION := /usr/lib64/libjemalloc.so.1
+ifeq (,$(wildcard $(LIBJEMALLOC_LOCATION)))
+$(info Could not find libjemalloc... benchmarks using that will not run)
+endif
+endif
 
 VALGRIND_LOGFILE_POSTFIX:=unit-tests-$(shell date +%F-%H%M%S)
 VALGRIND_SUPP:=valgrind.supp
