@@ -30,6 +30,7 @@ namespace memorypool {
 
 #define BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE (64)
 #define BOOST_INTRUSIVE_POOL_INCREASE_STEP (64)
+#define BOOST_INTRUSIVE_POOL_NO_MAX_SIZE (0)
 
 #ifndef BOOST_INTRUSIVE_POOL_DEBUG_CHECKS
 // if you define BOOST_INTRUSIVE_POOL_DEBUG_CHECKS=1 before including this header file,
@@ -328,13 +329,15 @@ public:
     // Tuning of these steps is critical for performances.
     // The ctor also allows you to specify which function should be run on items returning to the pool.
     boost_intrusive_pool(size_t init_size = BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE,
-        size_t enlarge_size = BOOST_INTRUSIVE_POOL_INCREASE_STEP, recycle_method_e method = RECYCLE_METHOD_NONE,
-        recycle_function recycle = nullptr)
+        size_t enlarge_size = BOOST_INTRUSIVE_POOL_INCREASE_STEP, size_t max_size = BOOST_INTRUSIVE_POOL_NO_MAX_SIZE,
+        recycle_method_e method = RECYCLE_METHOD_NONE, recycle_function recycle = nullptr)
     {
-        m_pool = boost::intrusive_ptr<impl>(new impl(enlarge_size, method, recycle));
+        assert(init_size > 0);
+        assert((max_size == BOOST_INTRUSIVE_POOL_NO_MAX_SIZE) || (max_size >= init_size && enlarge_size > 0));
+
+        m_pool = boost::intrusive_ptr<impl>(new impl(enlarge_size, max_size, method, recycle));
 
         // do initial malloc
-        assert(init_size > 0);
         m_pool->enlarge(init_size);
     }
     virtual ~boost_intrusive_pool() { m_pool->trigger_self_destruction(); }
@@ -379,9 +382,9 @@ public:
         return ret_ptr;
     }
 
-    // Returns first available free item or, if necessary and the memory pool is unbounded,
-    // allocates a new item.
-    // Uses C++11 perfect forwarding to the init() function of the memory pooled item.
+    // Returns first available free item or, if necessary and the memory pool is unbounded and has not reached the
+    // maximum size, allocates a new item. Uses C++11 perfect forwarding to the init() function of the memory pooled
+    // item.
     template <typename... Args> item_ptr allocate_through_init(Args&&... args)
     {
         Item* recycled_item = m_pool->allocate_safe_get_recycled_item();
@@ -439,11 +442,12 @@ public:
         // still alive... so we must play safe:
         size_t init_size = m_pool->m_enlarge_step;
         size_t enlarge_size = m_pool->m_enlarge_step;
+        size_t max_size = m_pool->m_max_size;
         recycle_method_e method = m_pool->m_recycle_method;
         recycle_function recycle = m_pool->m_recycle_fn;
         m_pool->trigger_self_destruction();
         m_pool = nullptr; // release old pool
-        m_pool = boost::intrusive_ptr<impl>(new impl(enlarge_size, method, recycle));
+        m_pool = boost::intrusive_ptr<impl>(new impl(enlarge_size, max_size, method, recycle));
     }
 
     void check() { m_pool->check(); }
@@ -480,7 +484,7 @@ private:
     /// into the pool once they go out of scope.
     class impl : public boost_intrusive_pool_iface {
     public:
-        impl(size_t enlarge_size, recycle_method_e method, recycle_function recycle)
+        impl(size_t enlarge_size, size_t max_size, recycle_method_e method, recycle_function recycle)
         {
             // assert(enlarge_size > 0); // NOTE: enlarge_size can be zero to create a limited-size memory pool
 
@@ -488,6 +492,7 @@ private:
             m_recycle_method = method;
             m_recycle_fn = recycle;
             m_enlarge_step = enlarge_size;
+            m_max_size = max_size;
 
             // status
             m_first_free_item = nullptr;
@@ -544,7 +549,10 @@ private:
 
             if (m_free_count == 0) {
                 assert(m_first_free_item == nullptr);
-                if (m_enlarge_step == 0 || !enlarge(m_enlarge_step)) {
+                size_t enlarge_step = m_enlarge_step;
+                if (m_enlarge_step > 0 && (m_max_size > 0 && (m_total_count + m_enlarge_step > m_max_size)))
+                    enlarge_step = m_max_size - m_total_count;
+                if (enlarge_step == 0 || !enlarge(enlarge_step)) {
                     m_memory_exhausted = true;
                     return nullptr; // allocation by enlarge() failed or this is a fixed-size memory pool!
                 }
@@ -566,19 +574,23 @@ private:
             // update the pointer to the next free item available
             m_first_free_item = m_first_free_item->_refcounted_item_get_next();
             if (m_first_free_item == nullptr && m_enlarge_step > 0) {
-                // this is an infinite memory pool:
-                // exit the function leaving the m_first_free_item as a valid pointer to a free item!
-                // this is just to simplify debugging and make more effective the check() function implementation!
-
-                assert(m_free_count == 0);
-                if (!enlarge(m_enlarge_step)) {
+                size_t enlarge_step = m_enlarge_step;
+                if (m_enlarge_step > 0 && (m_max_size > 0 && (m_total_count + m_enlarge_step > m_max_size)))
+                    enlarge_step = m_max_size - m_total_count;
+                if (enlarge_step == 0) {
                     m_memory_exhausted = true;
-                    return nullptr; // allocation by enlarge() failed or this is a fixed-size memory pool!
+                } else {
+                    // this is a memory pool which can be still enlarged:
+                    // exit the function leaving the m_first_free_item as a valid pointer to a free item!
+                    // this is just to simplify debugging and make more effective the check() function implementation!
+
+                    assert(m_free_count == 0);
+                    if (!enlarge(enlarge_step)) {
+                        m_memory_exhausted = true;
+                        // return nullptr; // allocation by enlarge() failed or this is a fixed-size memory pool!
+                    }
                 }
             }
-
-            // make sure the memory-exhausted flag is cleared (m_first_free_item != nullptr)
-            m_memory_exhausted = false;
 
             // unlink the item to return
             recycled_item->_refcounted_item_set_next(nullptr);
@@ -723,7 +735,8 @@ private:
                     // when the memory pool is bounded it contains only 1 arena of a fixed size:
                     assert(m_first_arena == m_last_arena);
                 } else {
-                    // infinite memory pool: either we have a valid free element or the last malloc() must have failed:
+                    // infinite or max size memory pool: either we have a valid free element or the last malloc() must
+                    // have failed or the maximum size has been reached:
                     assert(m_first_free_item != nullptr || m_memory_exhausted);
                 }
             } else {
@@ -745,6 +758,11 @@ private:
         bool empty() const { return m_free_count == m_total_count; }
 
         bool is_bounded() const { return m_enlarge_step == 0; }
+
+        bool can_be_enlarged() const
+        {
+            return m_enlarge_step > 0 && (m_max_size == 0 || (m_total_count + m_enlarge_step) <= m_max_size);
+        }
 
         bool is_memory_exhausted() const { return m_memory_exhausted; }
 
@@ -780,6 +798,11 @@ private:
         // If this is zero, then this is a bounded pool, which cannot grow beyond
         // the initial size provided at construction time.
         size_t m_enlarge_step;
+        // Maximum pool size.
+        // If this is zero, then it is ignored.
+        // If this is greater then zero, then no more items will be added to the pull if resulting size would exceed
+        // this value. If enlarge_step is zero, the max_size parameter become meaningless.
+        size_t m_max_size;
 
         // Pointers to first and last arenas.
         // First arena is changed only at
@@ -794,9 +817,12 @@ private:
         // depending on the deallocation pattern.
         // This pointer can be NULL only whether:
         // - an infinite memory pool has exhausted memory (malloc returned NULL);
-        //   in such case m_memory_exhausted==true
         // - a bounded memory pool has exhausted all its items
+        // - a maximum size memory pool has exhausted all its items and reached the limit
+        // In such cases m_memory_exhausted==true
         boost_intrusive_pool_item* m_first_free_item;
+        // This flag can be true if allocation by enlarge() failed or this is a fixed-size memory pool or this is a
+        // maximum size memory pool!
         bool m_memory_exhausted;
 
         // stats

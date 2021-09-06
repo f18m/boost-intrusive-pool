@@ -62,7 +62,7 @@ struct dummy_one : public boost_intrusive_pool_item {
 
     ~dummy_one() { --m_count; }
 
-    void init() {}
+    void init() { }
 
     // Counter which will check how many object have been allocate
     // and deallocated
@@ -71,7 +71,9 @@ struct dummy_one : public boost_intrusive_pool_item {
 
 int32_t dummy_one::m_count = 0;
 
-void recycle_dummy_one(boost::intrusive_ptr<dummy_one> p) { /* nothing to do actually */}
+void recycle_dummy_one(boost::intrusive_ptr<dummy_one> p)
+{ /* nothing to do actually */
+}
 
 // Non Default constructible dummy object
 struct dummy_two : public boost_intrusive_pool_item {
@@ -79,14 +81,16 @@ struct dummy_two : public boost_intrusive_pool_item {
 
     ~dummy_two() { --m_count; }
 
-    void init(uint32_t useless = 0) {}
+    void init(uint32_t useless = 0) { }
 
     static int32_t m_count;
 };
 
 int32_t dummy_two::m_count = 0;
 
-void recycle_dummy_two(boost::intrusive_ptr<dummy_two> p) { /* nothing to do actually */}
+void recycle_dummy_two(boost::intrusive_ptr<dummy_two> p)
+{ /* nothing to do actually */
+}
 
 // enable_shared_from_this dummy object
 struct dummy_three : std::enable_shared_from_this<dummy_three>, public boost_intrusive_pool_item {
@@ -249,6 +253,72 @@ void bounded_memory_pool()
     }
 }
 
+void max_size_memory_pool()
+{
+    BOOST_TEST_MESSAGE("Starting boost_intrusive_pool<> tests when memory pool has max size");
+
+    struct {
+        unsigned int initial_size;
+        unsigned int enlarge_step;
+        unsigned int max_size;
+    } testArray[] = {
+        { 1, 1, 10 }, // force newline
+        { 10, 2, 21 }, // force newline
+        { 100000, 1, 100010 }, // force newline
+    };
+
+    for (int testIdx = 0; testIdx < sizeof(testArray) / sizeof(testArray[0]); testIdx++) {
+        BOOST_TEST_MESSAGE(std::string("Starting test entry #") + std::to_string(testIdx));
+
+        boost_intrusive_pool<DummyInt> f(testArray[testIdx].initial_size /* initial size */,
+            testArray[testIdx].enlarge_step /* enlarge step */, testArray[testIdx].max_size /* max size */);
+        std::vector<HDummyInt> helper_container;
+
+        for (unsigned int j = 0; j < testArray[testIdx].initial_size; j++) {
+            HDummyInt myInt = f.allocate_through_init(3);
+            assert(myInt);
+            helper_container.push_back(myInt);
+
+            f.check();
+        }
+
+        if (testArray[testIdx].initial_size + testArray[testIdx].enlarge_step <= testArray[testIdx].max_size)
+            BOOST_REQUIRE_EQUAL(f.unused_count(), testArray[testIdx].enlarge_step);
+        else
+            BOOST_REQUIRE_EQUAL(f.unused_count(), testArray[testIdx].max_size - testArray[testIdx].initial_size);
+
+        for (unsigned int j = testArray[testIdx].initial_size; j < testArray[testIdx].max_size; j++) {
+            HDummyInt myInt = f.allocate_through_init(3);
+            assert(myInt);
+            helper_container.push_back(myInt);
+
+            f.check();
+        }
+
+        BOOST_REQUIRE_EQUAL(f.unused_count(), 0);
+
+        // now if we allocate more we should fail gracefully:
+        HDummyInt myInt = f.allocate_through_init(4);
+        BOOST_REQUIRE(!myInt);
+
+        // This should hold always:
+        BOOST_REQUIRE_EQUAL(f.unused_count() + f.inuse_count(), f.capacity());
+        BOOST_REQUIRE_EQUAL(f.inuse_count(), testArray[testIdx].max_size);
+        BOOST_REQUIRE_EQUAL(f.capacity(), testArray[testIdx].max_size);
+        BOOST_REQUIRE(!f.empty());
+        BOOST_REQUIRE(f.enlarge_steps_done() > 0);
+
+        helper_container.clear();
+        f.clear();
+
+        f.check();
+
+        BOOST_REQUIRE_EQUAL(f.inuse_count(), 0);
+        BOOST_REQUIRE_EQUAL(f.capacity(), 0);
+        BOOST_REQUIRE(f.empty());
+    }
+}
+
 /// Test the basic API construct and free some objects
 void test_api()
 {
@@ -364,7 +434,7 @@ void pool_die_before_object()
 
 void overwrite_pool_items_with_other_pool_items()
 {
-    boost_intrusive_pool<DummyInt> pool(64, 16, memorypool::RECYCLE_METHOD_DESTROY_FUNCTION);
+    boost_intrusive_pool<DummyInt> pool(64, 16, 0, memorypool::RECYCLE_METHOD_DESTROY_FUNCTION);
 
     pool.check();
 
@@ -434,6 +504,7 @@ boost::unit_test::test_suite* init_unit_test_suite(int argc, char* argv[])
 
     test->add(BOOST_TEST_CASE(&infinite_memory_pool));
     test->add(BOOST_TEST_CASE(&bounded_memory_pool));
+    test->add(BOOST_TEST_CASE(&max_size_memory_pool));
     test->add(BOOST_TEST_CASE(&test_api));
     test->add(BOOST_TEST_CASE(&test_allocate_methods));
     test->add(BOOST_TEST_CASE(&pool_die_before_object));
