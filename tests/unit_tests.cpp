@@ -265,6 +265,7 @@ void max_size_memory_pool()
         { 1, 1, 10 }, // force newline
         { 10, 2, 21 }, // force newline
         { 100000, 1, 100010 }, // force newline
+        { 128, 4096, 5000 }, // force newline
     };
 
     for (int testIdx = 0; testIdx < sizeof(testArray) / sizeof(testArray[0]); testIdx++) {
@@ -274,6 +275,9 @@ void max_size_memory_pool()
             testArray[testIdx].enlarge_step /* enlarge step */, testArray[testIdx].max_size /* max size */);
         std::vector<HDummyInt> helper_container;
 
+        BOOST_REQUIRE(f.is_limited());
+        BOOST_REQUIRE_EQUAL(f.max_size(), testArray[testIdx].max_size);
+
         for (unsigned int j = 0; j < testArray[testIdx].initial_size; j++) {
             HDummyInt myInt = f.allocate_through_init(3);
             assert(myInt);
@@ -282,10 +286,13 @@ void max_size_memory_pool()
             f.check();
         }
 
-        if (testArray[testIdx].initial_size + testArray[testIdx].enlarge_step <= testArray[testIdx].max_size)
-            BOOST_REQUIRE_EQUAL(f.unused_count(), testArray[testIdx].enlarge_step);
-        else
-            BOOST_REQUIRE_EQUAL(f.unused_count(), testArray[testIdx].max_size - testArray[testIdx].initial_size);
+        // When initial_size items are allocated, the memory pool will try to pre-allocate enlarge_step items.
+        // At that point, unused_count will be equal to enlarge_step.
+        // But if initial_size + enlarge_step exceeds max_size, the enlarge_step will be the remaining to max_size.
+        size_t enlarge_step = testArray[testIdx].enlarge_step;
+        if (testArray[testIdx].initial_size + testArray[testIdx].enlarge_step > testArray[testIdx].max_size)
+            enlarge_step = testArray[testIdx].max_size - testArray[testIdx].initial_size;
+        BOOST_REQUIRE_EQUAL(f.unused_count(), enlarge_step);
 
         for (unsigned int j = testArray[testIdx].initial_size; j < testArray[testIdx].max_size; j++) {
             HDummyInt myInt = f.allocate_through_init(3);

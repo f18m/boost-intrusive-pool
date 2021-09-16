@@ -462,10 +462,14 @@ public:
 
     bool is_bounded() const { return m_pool->is_bounded(); }
 
+    bool is_limited() const { return m_pool->is_limited(); }
+
     bool is_memory_exhausted() const { return m_pool->is_memory_exhausted(); }
 
     // returns the current (=maximum) capacity of the object pool
     size_t capacity() const { return m_pool->capacity(); }
+
+    size_t max_size() const { return m_pool->max_size(); }
 
     // returns the number of free entries of the pool
     size_t unused_count() const { return m_pool->unused_count(); }
@@ -538,6 +542,14 @@ private:
             }
         }
 
+        size_t get_effective_enlarge_step() const
+        {
+            size_t enlarge_step = m_enlarge_step;
+            if (m_enlarge_step > 0 && (m_max_size > 0 && (m_total_count + m_enlarge_step > m_max_size)))
+                enlarge_step = m_max_size - m_total_count; // enlarge_step can be zero if we reach the max_size
+            return enlarge_step;
+        }
+
         Item* allocate_safe_get_recycled_item()
         {
 #if BOOST_INTRUSIVE_POOL_DEBUG_THREAD_ACCESS
@@ -549,9 +561,7 @@ private:
 
             if (m_free_count == 0) {
                 assert(m_first_free_item == nullptr);
-                size_t enlarge_step = m_enlarge_step;
-                if (m_enlarge_step > 0 && (m_max_size > 0 && (m_total_count + m_enlarge_step > m_max_size)))
-                    enlarge_step = m_max_size - m_total_count;
+                size_t enlarge_step = get_effective_enlarge_step();
                 if (enlarge_step == 0 || !enlarge(enlarge_step)) {
                     m_memory_exhausted = true;
                     return nullptr; // allocation by enlarge() failed or this is a fixed-size memory pool!
@@ -574,10 +584,8 @@ private:
             // update the pointer to the next free item available
             m_first_free_item = m_first_free_item->_refcounted_item_get_next();
             if (m_first_free_item == nullptr && m_enlarge_step > 0) {
-                size_t enlarge_step = m_enlarge_step;
-                if (m_enlarge_step > 0 && (m_max_size > 0 && (m_total_count + m_enlarge_step > m_max_size)))
-                    enlarge_step = m_max_size - m_total_count;
-                if (enlarge_step == 0) {
+                size_t enlarge_step = get_effective_enlarge_step();
+                if (enlarge_step == 0) { // enlarge_step can be zero if we reach the max_size
                     m_memory_exhausted = true;
                 } else {
                     // this is a memory pool which can be still enlarged:
@@ -587,7 +595,8 @@ private:
                     assert(m_free_count == 0);
                     if (!enlarge(enlarge_step)) {
                         m_memory_exhausted = true;
-                        // return nullptr; // allocation by enlarge() failed or this is a fixed-size memory pool!
+                        // We tried to fetch memory from the O.S. but we failed. However we succeeded in getting the
+                        // last available item. So fallback and provide that last item to the caller.
                     }
                 }
             }
@@ -759,15 +768,16 @@ private:
 
         bool is_bounded() const { return m_enlarge_step == 0; }
 
-        bool can_be_enlarged() const
-        {
-            return m_enlarge_step > 0 && (m_max_size == 0 || (m_total_count + m_enlarge_step) <= m_max_size);
-        }
+        bool is_limited() const { return (m_enlarge_step == 0 || m_max_size != 0); }
+
+        bool can_be_enlarged() const { return m_enlarge_step > 0 && (m_max_size == 0 || m_total_count < m_max_size); }
 
         bool is_memory_exhausted() const { return m_memory_exhausted; }
 
         // returns the current (=maximum) capacity of the object pool
         size_t capacity() const { return m_total_count; }
+
+        size_t max_size() const { return (m_enlarge_step != 0) ? m_max_size : m_total_count; }
 
         // returns the number of free entries of the pool
         size_t unused_count() const { return m_free_count; }
