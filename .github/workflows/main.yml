@@ -1,0 +1,23 @@
+name: main CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  run_unit_test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # install deps
+    - uses: actions/checkout@v2
+    - name: install debian-packaged dependencies
+      run: sudo apt install -y libboost-dev valgrind
+
+    # test
+    - name: run unit tests
+      run: make test
+    - name: run unit tests with VALGRIND
+      run: make test_valgrind
