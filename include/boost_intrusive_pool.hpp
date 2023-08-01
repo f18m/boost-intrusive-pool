@@ -23,7 +23,6 @@
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 
-namespace memorypool {
 //------------------------------------------------------------------------------
 // Constants
 //------------------------------------------------------------------------------
@@ -53,6 +52,12 @@ namespace memorypool {
 // sane and valid and which range cannot be considered valid!
 #define BOOST_INTRUSIVE_POOL_DEBUG_MAX_REFCOUNT (1024)
 #endif
+
+//------------------------------------------------------------------------------
+// Start of memorypool namespace
+//------------------------------------------------------------------------------
+
+namespace memorypool {
 
 typedef enum {
     RECYCLE_METHOD_NONE, // when an item returns into the pool, do nothing
