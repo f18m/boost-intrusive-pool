@@ -342,6 +342,7 @@ public:
         size_t max_size = BOOST_INTRUSIVE_POOL_NO_MAX_SIZE, recycle_method_e recycle_method = RECYCLE_METHOD_NONE,
         recycle_function recycle_fn = nullptr)
     {
+        // NOTE: return value is ignored... if the software is out of memory... we can't do much within a ctor
         init(init_size, enlarge_size, max_size, recycle_method, recycle_fn);
     }
     virtual ~boost_intrusive_pool()
@@ -366,7 +367,7 @@ public:
     // configuration/initialization methods
     //------------------------------------------------------------------------------
 
-    void init(size_t init_size = BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE,
+    bool init(size_t init_size = BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE,
         size_t enlarge_size = BOOST_INTRUSIVE_POOL_INCREASE_STEP, size_t max_size = BOOST_INTRUSIVE_POOL_NO_MAX_SIZE,
         recycle_method_e recycle_method = RECYCLE_METHOD_NONE, recycle_function recycle_fn = nullptr)
     {
@@ -377,7 +378,7 @@ public:
         m_pool = boost::intrusive_ptr<impl>(new impl(enlarge_size, max_size, recycle_method, recycle_fn));
 
         // do initial malloc
-        m_pool->enlarge(init_size);
+        return m_pool->enlarge(init_size);
     }
 
     void set_recycle_method(recycle_method_e method, recycle_function recycle_fn = nullptr)
