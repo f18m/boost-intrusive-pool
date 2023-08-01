@@ -48,6 +48,10 @@ MEMCHECK_COMMON_OPTS:=--tool=memcheck $(VALGRIND_COMMON_OPTS) --track-origins=ye
 all: $(BINS)
 	@echo "Run tests/tutorial for a short tutorial (read comments in the source code!)"
 
+format_check:
+	# if you have clang-format >= 10.0.0, this will work:
+	@clang-format --dry-run --Werror include/boost_intrusive_pool.hpp
+
 test: $(BINS)
 	tests/unit_tests --log_level=all --show_progress
 

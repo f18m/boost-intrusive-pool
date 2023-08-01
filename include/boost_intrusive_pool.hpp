@@ -23,7 +23,6 @@
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 
-namespace memorypool {
 //------------------------------------------------------------------------------
 // Constants
 //------------------------------------------------------------------------------
@@ -54,10 +53,18 @@ namespace memorypool {
 #define BOOST_INTRUSIVE_POOL_DEBUG_MAX_REFCOUNT (1024)
 #endif
 
+//------------------------------------------------------------------------------
+// Start of memorypool namespace
+//------------------------------------------------------------------------------
+
+namespace memorypool {
+
 typedef enum {
-    RECYCLE_METHOD_NONE,
-    RECYCLE_METHOD_DESTROY_FUNCTION,
-    RECYCLE_METHOD_CUSTOM_FUNCTION,
+    RECYCLE_METHOD_NONE, // when an item returns into the pool, do nothing
+    RECYCLE_METHOD_DESTROY_FUNCTION, // when an item returns into the pool, invoke the
+                                     // boost_intrusive_pool_item::destroy() virtual func
+    RECYCLE_METHOD_CUSTOM_FUNCTION, // when an item returns into the pool, invoke a function provided at boost memory
+                                    // pool init time
     // RECYCLE_METHOD_DTOR,
 } recycle_method_e;
 
@@ -120,7 +127,7 @@ public:
         m_boost_intrusive_pool_refcount = 0;
         m_boost_intrusive_pool_owner = nullptr;
     }
-    virtual ~boost_intrusive_pool_item() {}
+    virtual ~boost_intrusive_pool_item() { }
 
     //------------------------------------------------------------------------------
     // emulate the boost::intrusive_ref_counter class implementation:
@@ -167,7 +174,7 @@ public:
     // default init-after-recycle, destroy-before-recycle methods:
     //------------------------------------------------------------------------------
 
-    virtual void destroy() {}
+    virtual void destroy() { }
 
     //------------------------------------------------------------------------------
     // memorypool utility functions
@@ -325,22 +332,24 @@ public:
 
 public:
     // Default constructor
+    // Leaves this memory pool uninitialized. It's mandatory to invoke init() after this one.
+    boost_intrusive_pool() { m_pool = nullptr; }
+
     // Constructs a memory pool quite small which increases its size by rather small steps.
     // Tuning of these steps is critical for performances.
     // The ctor also allows you to specify which function should be run on items returning to the pool.
-    boost_intrusive_pool(size_t init_size = BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE,
-        size_t enlarge_size = BOOST_INTRUSIVE_POOL_INCREASE_STEP, size_t max_size = BOOST_INTRUSIVE_POOL_NO_MAX_SIZE,
-        recycle_method_e method = RECYCLE_METHOD_NONE, recycle_function recycle = nullptr)
+    boost_intrusive_pool(size_t init_size, size_t enlarge_size = BOOST_INTRUSIVE_POOL_INCREASE_STEP,
+        size_t max_size = BOOST_INTRUSIVE_POOL_NO_MAX_SIZE, recycle_method_e recycle_method = RECYCLE_METHOD_NONE,
+        recycle_function recycle_fn = nullptr)
     {
-        assert(init_size > 0);
-        assert((max_size == BOOST_INTRUSIVE_POOL_NO_MAX_SIZE) || (max_size >= init_size && enlarge_size > 0));
-
-        m_pool = boost::intrusive_ptr<impl>(new impl(enlarge_size, max_size, method, recycle));
-
-        // do initial malloc
-        m_pool->enlarge(init_size);
+        // NOTE: return value is ignored... if the software is out of memory... we can't do much within a ctor
+        init(init_size, enlarge_size, max_size, recycle_method, recycle_fn);
     }
-    virtual ~boost_intrusive_pool() { m_pool->trigger_self_destruction(); }
+    virtual ~boost_intrusive_pool()
+    {
+        if (m_pool)
+            m_pool->trigger_self_destruction();
+    }
 
     // Copy constructor
     boost_intrusive_pool(const boost_intrusive_pool& other) = delete;
@@ -355,11 +364,26 @@ public:
     boost_intrusive_pool& operator=(boost_intrusive_pool&& other) = delete;
 
     //------------------------------------------------------------------------------
-    // configuration methods
+    // configuration/initialization methods
     //------------------------------------------------------------------------------
+
+    bool init(size_t init_size = BOOST_INTRUSIVE_POOL_DEFAULT_POOL_SIZE,
+        size_t enlarge_size = BOOST_INTRUSIVE_POOL_INCREASE_STEP, size_t max_size = BOOST_INTRUSIVE_POOL_NO_MAX_SIZE,
+        recycle_method_e recycle_method = RECYCLE_METHOD_NONE, recycle_function recycle_fn = nullptr)
+    {
+        assert(m_pool == nullptr); // cannot initialize twice the memory pool
+        assert(init_size > 0);
+        assert((max_size == BOOST_INTRUSIVE_POOL_NO_MAX_SIZE) || (max_size >= init_size && enlarge_size > 0));
+
+        m_pool = boost::intrusive_ptr<impl>(new impl(enlarge_size, max_size, recycle_method, recycle_fn));
+
+        // do initial malloc
+        return m_pool->enlarge(init_size);
+    }
 
     void set_recycle_method(recycle_method_e method, recycle_function recycle_fn = nullptr)
     {
+        assert(m_pool); // pool must be initialized
         m_pool->set_recycle_method(method, recycle_fn);
     }
 
@@ -367,8 +391,10 @@ public:
     // allocate method variants
     //------------------------------------------------------------------------------
 
+    // Returns the first available free item.
     item_ptr allocate()
     {
+        assert(m_pool); // pool must be initialized
         Item* recycled_item = m_pool->allocate_safe_get_recycled_item();
         if (!recycled_item)
             return nullptr;
@@ -387,6 +413,7 @@ public:
     // item.
     template <typename... Args> item_ptr allocate_through_init(Args&&... args)
     {
+        assert(m_pool); // pool must be initialized
         Item* recycled_item = m_pool->allocate_safe_get_recycled_item();
         if (!recycled_item)
             return nullptr;
@@ -407,6 +434,7 @@ public:
     // allocates a new item.
     template <typename... Args> item_ptr allocate_through_function(allocate_function fn)
     {
+        assert(m_pool); // pool must be initialized
         Item* recycled_item = m_pool->allocate_safe_get_recycled_item();
         if (!recycled_item)
             return nullptr;
@@ -435,6 +463,9 @@ public:
 
     void clear()
     {
+        if (!m_pool)
+            return; // nothing to do
+
         // VERY IMPORTANT: this function is very tricky: to do this correctly we cannot
         // simply call m_pool->clear(): that would remove all arenas that are the memory
         // support of memory pool items.
@@ -450,7 +481,12 @@ public:
         m_pool = boost::intrusive_ptr<impl>(new impl(enlarge_size, max_size, method, recycle));
     }
 
-    void check() { m_pool->check(); }
+    void check()
+    {
+        if (!m_pool)
+            return; // nothing to do
+        m_pool->check();
+    }
 
     //------------------------------------------------------------------------------
     // getters
@@ -458,27 +494,27 @@ public:
 
     // returns true if there are no elements in use.
     // Note that if empty()==true, it does not mean that capacity()==0 as well!
-    bool empty() const { return m_pool->empty(); }
+    bool empty() const { return m_pool ? m_pool->empty() : true; }
 
-    bool is_bounded() const { return m_pool->is_bounded(); }
+    bool is_bounded() const { return m_pool ? m_pool->is_bounded() : false; }
 
-    bool is_limited() const { return m_pool->is_limited(); }
+    bool is_limited() const { return m_pool ? m_pool->is_limited() : false; }
 
-    bool is_memory_exhausted() const { return m_pool->is_memory_exhausted(); }
+    bool is_memory_exhausted() const { return m_pool ? m_pool->is_memory_exhausted() : false; }
 
     // returns the current (=maximum) capacity of the object pool
-    size_t capacity() const { return m_pool->capacity(); }
+    size_t capacity() const { return m_pool ? m_pool->capacity() : 0; }
 
-    size_t max_size() const { return m_pool->max_size(); }
+    size_t max_size() const { return m_pool ? m_pool->max_size() : 0; }
 
     // returns the number of free entries of the pool
-    size_t unused_count() const { return m_pool->unused_count(); }
+    size_t unused_count() const { return m_pool ? m_pool->unused_count() : 0; }
 
     // returns the number of items currently malloc()ed from this pool
-    size_t inuse_count() const { return m_pool->inuse_count(); }
+    size_t inuse_count() const { return m_pool ? m_pool->inuse_count() : 0; }
 
     // returns the number of mallocs done so far
-    size_t enlarge_steps_done() const { return m_pool->enlarge_steps_done(); }
+    size_t enlarge_steps_done() const { return m_pool ? m_pool->enlarge_steps_done() : 0; }
 
 private:
     /// The actual pool implementation. We use the

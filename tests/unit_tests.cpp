@@ -333,6 +333,8 @@ void test_api()
         uint32_t recycled = 0;
         boost_intrusive_pool<dummy_one> pool;
 
+        BOOST_REQUIRE(pool.init());
+
         auto recycle_fn = [&recycled](dummy_one& object) {
             BOOST_REQUIRE(object.m_count > 0);
             object.m_count--;
@@ -384,6 +386,8 @@ void test_allocate_methods()
     {
         boost_intrusive_pool<dummy_two> pool;
 
+        BOOST_REQUIRE(pool.init());
+
         auto o1 = pool.allocate();
         auto o2 = pool.allocate();
 
@@ -399,6 +403,8 @@ void test_allocate_methods()
 
     {
         boost_intrusive_pool<dummy_two> pool;
+
+        BOOST_REQUIRE(pool.init());
 
         auto o1 = pool.allocate_through_init(3U);
         auto o2 = pool.allocate_through_init(3U);
@@ -425,6 +431,8 @@ void pool_die_before_object()
 
         {
             boost_intrusive_pool<dummy_one> pool;
+
+            BOOST_REQUIRE(pool.init());
 
             d1 = pool.allocate();
             d2 = pool.allocate();

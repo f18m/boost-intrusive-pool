@@ -12,6 +12,7 @@
 //------------------------------------------------------------------------------
 
 #include <map>
+#include <string>
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -88,7 +89,7 @@ unsigned long LargeObject::m_dtor_count = 0;
 
 class NoPool {
 public:
-    NoPool() {}
+    NoPool() { }
 
     // just malloc using new() and run the default ctor:
     HLargeObject allocate_through_init() { return HLargeObject(new LargeObject()); }
