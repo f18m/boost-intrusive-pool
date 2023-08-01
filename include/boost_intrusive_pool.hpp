@@ -55,9 +55,11 @@ namespace memorypool {
 #endif
 
 typedef enum {
-    RECYCLE_METHOD_NONE,
-    RECYCLE_METHOD_DESTROY_FUNCTION,
-    RECYCLE_METHOD_CUSTOM_FUNCTION,
+    RECYCLE_METHOD_NONE, // when an item returns into the pool, do nothing
+    RECYCLE_METHOD_DESTROY_FUNCTION, // when an item returns into the pool, invoke the
+                                     // boost_intrusive_pool_item::destroy() virtual func
+    RECYCLE_METHOD_CUSTOM_FUNCTION, // when an item returns into the pool, invoke a function provided at boost memory
+                                    // pool init time
     // RECYCLE_METHOD_DTOR,
 } recycle_method_e;
 
@@ -337,7 +339,11 @@ public:
     {
         init(init_size, enlarge_size, max_size, recycle_method, recycle_fn);
     }
-    virtual ~boost_intrusive_pool() { m_pool->trigger_self_destruction(); }
+    virtual ~boost_intrusive_pool()
+    {
+        if (m_pool)
+            m_pool->trigger_self_destruction();
+    }
 
     // Copy constructor
     boost_intrusive_pool(const boost_intrusive_pool& other) = delete;
