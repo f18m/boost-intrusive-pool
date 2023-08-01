@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <pthread.h>
 
 #define TRACE_METHOD() std::cout << "[Executing " << __PRETTY_FUNCTION__ << " for instance=" << this << "]\n";
 
